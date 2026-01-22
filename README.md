@@ -48,13 +48,15 @@ That's it. Everything else is automatic.
 | Need research or exploration | Delegate to specialized agents |
 | Say "build me..." or use autopilot | Execute full autonomous workflow |
 
-**You don't need to learn any commands.** I detect what you need and activate the right behaviors.
+**You don't need to memorize commands.** I detect intent from natural language and activate the right behaviors automatically.
 
 ---
 
-## Magic Keywords (Power Users)
+## Magic Keywords (Optional Shortcuts)
 
-Want explicit control? Include these words anywhere in your message:
+These are **optional shortcuts** for power users who want explicit control. Natural language works just fine - these keywords simply provide precision when you want it.
+
+Include these words anywhere in your message:
 
 | Keyword | Effect |
 |---------|--------|
