@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.8] - 2026-01-23
+
+### Added
+- **Windows 100% Cross-Platform Compatibility**: Full Windows support across the entire codebase
+  - New `src/platform/` module with unified platform detection utilities
+  - Cross-platform process management (taskkill on Windows, negative PID on Unix)
+  - Process start time detection via WMIC (Windows), /proc (Linux), ps (macOS)
+  - O_NOFOLLOW fallback for Windows (doesn't exist on that platform)
+  - Windows LOCALAPPDATA for runtime directories
+  - Cross-platform path handling using path.parse(), path.basename(), path.join()
+  - Windows npm-based auto-update (instead of bash scripts)
+  - windowsHide: true on all exec calls to prevent console flashing
+
+### Changed
+- Deduplicated process utilities in bridge-manager.ts and session-lock.ts to use central platform module
+- Improved LSP workspace root detection for Windows paths
+
 ## [3.3.7] - 2026-01-22
 
 ### Added

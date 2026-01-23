@@ -10,7 +10,7 @@
 
 # oh-my-claudecode
 
-[![Version](https://img.shields.io/badge/version-3.3.7-ff6b6b)](https://github.com/Yeachan-Heo/oh-my-claudecode)
+[![Version](https://img.shields.io/badge/version-3.3.8-ff6b6b)](https://github.com/Yeachan-Heo/oh-my-claudecode)
 [![npm version](https://img.shields.io/npm/v/oh-my-claudecode?color=cb3837)](https://www.npmjs.com/package/oh-my-claudecode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)

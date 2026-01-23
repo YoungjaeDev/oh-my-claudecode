@@ -94,6 +94,10 @@ export function getRuntimeDir(): string {
   } else if (platform === "linux") {
     // Linux fallback - use /tmp (XDG validation failed)
     return path.join("/tmp", "omc", "runtime");
+  } else if (platform === "win32") {
+    // Windows: use LOCALAPPDATA (e.g., C:\Users\<user>\AppData\Local)
+    const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local");
+    return path.join(localAppData, "omc", "runtime");
   }
 
   // Priority 3: Final fallback to os.tmpdir() for any other platform

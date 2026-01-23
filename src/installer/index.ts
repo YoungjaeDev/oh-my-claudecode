@@ -48,7 +48,7 @@ export const VERSION_FILE = join(CLAUDE_CONFIG_DIR, '.omc-version.json');
 export const CORE_COMMANDS: string[] = [];
 
 /** Current version */
-export const VERSION = '3.3.7';
+export const VERSION = '3.3.8';
 
 /** Installation result */
 export interface InstallResult {
@@ -287,8 +287,10 @@ export function install(options: InstallOptions = {}): InstallResult {
         const filepath = join(COMMANDS_DIR, filename);
 
         // Create command directory if needed (only for nested paths like 'ultrawork/skill.md')
-        if (filename.includes('/')) {
-          const commandDir = join(COMMANDS_DIR, filename.split('/')[0]);
+        // Handle both Unix (/) and Windows (\) path separators
+        if (filename.includes('/') || filename.includes('\\')) {
+          const segments = filename.split(/[/\\]/);
+          const commandDir = join(COMMANDS_DIR, segments[0]);
           if (!existsSync(commandDir)) {
             mkdirSync(commandDir, { recursive: true });
           }

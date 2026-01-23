@@ -19,6 +19,7 @@ import { promisify } from 'util';
 import { BridgeMeta, PythonEnvInfo } from './types.js';
 import { getSessionDir, getBridgeSocketPath, getBridgeMetaPath } from './paths.js';
 import { atomicWriteJson, safeReadJson, ensureDirSync } from '../../lib/atomic-write.js';
+import { getProcessStartTime, isProcessAlive } from '../../platform/index.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -108,73 +109,6 @@ async function ensurePythonEnvironment(projectRoot: string): Promise<PythonEnvIn
 // =============================================================================
 
 /**
- * Get process start time on Linux via /proc/{pid}/stat field 22.
- */
-async function getProcessStartTimeLinux(pid: number): Promise<number | undefined> {
-  try {
-    const stat = await fsPromises.readFile(`/proc/${pid}/stat`, 'utf8');
-    const closeParen = stat.lastIndexOf(')');
-    if (closeParen === -1) return undefined;
-
-    const fieldsAfterComm = stat.substring(closeParen + 2).split(' ');
-    // starttime is field 22 in /proc/pid/stat, index 19 after removing pid and comm
-    const startTimeField = fieldsAfterComm[19];
-    if (!startTimeField) return undefined;
-
-    const startTime = parseInt(startTimeField, 10);
-    return isNaN(startTime) ? undefined : startTime;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Get process start time on macOS via `ps -p {pid} -o lstart=`.
- */
-async function getProcessStartTimeMacOS(pid: number): Promise<number | undefined> {
-  if (typeof pid !== 'number' || !Number.isInteger(pid) || pid <= 0) return undefined;
-
-  try {
-    const { stdout } = await execFileAsync('ps', ['-p', String(pid), '-o', 'lstart='], {
-      env: { ...process.env, LC_ALL: 'C' },
-    });
-    const lstart = stdout.trim();
-    if (!lstart) return undefined;
-
-    const date = new Date(lstart);
-    if (isNaN(date.getTime())) return undefined;
-
-    return date.getTime();
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Get process start time for a given PID (cross-platform).
- */
-async function getProcessStartTime(pid: number): Promise<number | undefined> {
-  if (process.platform === 'linux') {
-    return getProcessStartTimeLinux(pid);
-  } else if (process.platform === 'darwin') {
-    return getProcessStartTimeMacOS(pid);
-  }
-  return undefined;
-}
-
-/**
- * Check if a process is alive (basic check, no start time verification).
- */
-function isProcessAliveBasic(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Verify that a bridge process is still running and is the same process
  * that was originally spawned (guards against PID reuse).
  *
@@ -185,7 +119,7 @@ function isProcessAliveBasic(pid: number): boolean {
  */
 export async function verifyProcessIdentity(meta: BridgeMeta): Promise<boolean> {
   // Basic alive check first
-  if (!isProcessAliveBasic(meta.pid)) {
+  if (!isProcessAlive(meta.pid)) {
     return false;
   }
 
@@ -267,21 +201,34 @@ function isValidBridgeMeta(data: unknown): data is BridgeMeta {
 
 /**
  * Kill a process group (process + children).
- * Uses negative PID to target the process group.
+ * Cross-platform: Uses taskkill /T on Windows, negative PID on Unix.
  */
 function killProcessGroup(pid: number, signal: NodeJS.Signals): boolean {
-  try {
-    // Negative PID sends signal to process group
-    process.kill(-pid, signal);
-    return true;
-  } catch {
-    // Process might already be dead
+  if (process.platform === 'win32') {
+    // On Windows, use taskkill with /T for tree kill
     try {
-      // Fallback: kill just the process
-      process.kill(pid, signal);
+      const force = signal === 'SIGKILL';
+      const args = force ? '/F /T' : '/T';
+      require('child_process').execSync(
+        `taskkill ${args} /PID ${pid}`,
+        { stdio: 'ignore', timeout: 5000, windowsHide: true }
+      );
       return true;
     } catch {
       return false;
+    }
+  } else {
+    // Unix: use negative PID for process group
+    try {
+      process.kill(-pid, signal);
+      return true;
+    } catch {
+      try {
+        process.kill(pid, signal);
+        return true;
+      } catch {
+        return false;
+      }
     }
   }
 }

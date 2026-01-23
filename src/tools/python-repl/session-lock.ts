@@ -3,7 +3,7 @@
  *
  * Provides single-writer enforcement per session with:
  * - PID-reuse safety via process start time verification
- * - Cross-platform support (Linux, macOS)
+ * - Cross-platform support (Linux, macOS, Windows)
  * - Stale lock detection and safe breaking
  * - Request queuing with timeout
  */
@@ -18,6 +18,7 @@ import { promisify } from 'util';
 import { LockInfo } from './types.js';
 import { ensureDirSync } from '../../lib/atomic-write.js';
 import { getSessionLockPath } from './paths.js';
+import { getProcessStartTime } from '../../platform/index.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -85,69 +86,11 @@ function isValidPid(pid: unknown): pid is number {
 // =============================================================================
 
 /**
- * Get process start time on Linux via /proc/{pid}/stat field 22.
- * The stat format is: pid (comm) state ppid... with field 22 being starttime.
- * Command names can contain spaces/parens, so we parse from the last ')'.
- *
- * Returns clock ticks since boot (jiffies), or undefined if unavailable.
- */
-async function getProcessStartTimeLinux(pid: number): Promise<number | undefined> {
-  try {
-    const stat = await fs.readFile(`/proc/${pid}/stat`, 'utf8');
-    const closeParen = stat.lastIndexOf(')');
-    if (closeParen === -1) return undefined;
-
-    // Fields after comm: state(1) ppid(2) ... starttime(20) - 0-indexed after split
-    const fieldsAfterComm = stat.substring(closeParen + 2).split(' ');
-    // starttime is field 22 in /proc/pid/stat, which is index 19 after removing pid and comm
-    const startTimeField = fieldsAfterComm[19];
-    if (!startTimeField) return undefined;
-
-    const startTime = parseInt(startTimeField, 10);
-    return isNaN(startTime) ? undefined : startTime;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Get process start time on macOS via `ps -p {pid} -o lstart=`.
- * Returns Unix timestamp in ms, or undefined if unavailable.
- */
-async function getProcessStartTimeMacOS(pid: number): Promise<number | undefined> {
-  if (!isValidPid(pid)) return undefined;
-
-  try {
-    const { stdout } = await execFileAsync('ps', ['-p', String(pid), '-o', 'lstart='], {
-      env: { ...process.env, LC_ALL: 'C' },
-    });
-    const lstart = stdout.trim();
-    if (!lstart) return undefined;
-
-    const date = new Date(lstart);
-    if (isNaN(date.getTime())) return undefined;
-
-    return date.getTime();
-  } catch {
-    return undefined;
-  }
-}
-
-/**
  * Get the start time of the current process.
  * Used when creating lock files to enable PID reuse detection.
  */
 export async function getCurrentProcessStartTime(): Promise<number | undefined> {
-  const pid = process.pid;
-
-  if (process.platform === 'linux') {
-    return getProcessStartTimeLinux(pid);
-  } else if (process.platform === 'darwin') {
-    return getProcessStartTimeMacOS(pid);
-  }
-
-  // Unsupported platform - return undefined
-  return undefined;
+  return getProcessStartTime(process.pid);
 }
 
 // =============================================================================
@@ -165,7 +108,7 @@ export async function isProcessAlive(pid: number, recordedStartTime?: number): P
   if (!isValidPid(pid)) return false;
 
   if (process.platform === 'linux') {
-    const currentStartTime = await getProcessStartTimeLinux(pid);
+    const currentStartTime = await getProcessStartTime(pid);
     if (currentStartTime === undefined) return false;
 
     // If we have a recorded start time, verify it matches
@@ -184,7 +127,7 @@ export async function isProcessAlive(pid: number, recordedStartTime?: number): P
 
       // If we have a recorded start time, verify it matches
       if (recordedStartTime !== undefined) {
-        const currentStartTime = await getProcessStartTimeMacOS(pid);
+        const currentStartTime = await getProcessStartTime(pid);
         // Fail-closed: if we can't get current start time but we have a recorded one,
         // assume PID reuse has occurred (safer than assuming same process)
         if (currentStartTime === undefined) {
@@ -192,6 +135,25 @@ export async function isProcessAlive(pid: number, recordedStartTime?: number): P
         }
         if (currentStartTime !== recordedStartTime) {
           return false; // PID reuse detected
+        }
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  } else if (process.platform === 'win32') {
+    // On Windows, check if process exists and optionally verify start time
+    try {
+      process.kill(pid, 0);
+
+      if (recordedStartTime !== undefined) {
+        const currentStartTime = await getProcessStartTime(pid);
+        if (currentStartTime === undefined) {
+          return false;
+        }
+        if (currentStartTime !== recordedStartTime) {
+          return false;
         }
       }
 
@@ -219,7 +181,8 @@ async function openNoFollow(
   mode: number
 ): Promise<fs.FileHandle> {
   // Add O_NOFOLLOW if available (Linux, macOS)
-  const O_NOFOLLOW = fsSync.constants.O_NOFOLLOW ?? 0x20000;
+  // O_NOFOLLOW doesn't exist on Windows. Use 0 to disable the flag.
+  const O_NOFOLLOW = fsSync.constants.O_NOFOLLOW ?? 0;
   const flagsWithNoFollow = flags | O_NOFOLLOW;
 
   try {

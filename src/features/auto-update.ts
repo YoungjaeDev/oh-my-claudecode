@@ -304,15 +304,36 @@ export async function performUpdate(options?: {
       const isWindows = process.platform === 'win32';
 
       if (isWindows) {
-        // On Windows, we cannot execute bash scripts directly
-        // The install.sh script should be converted to PowerShell or executed via WSL
-        // For now, throw an error with instructions
-        throw new Error(
-          'Automated updates are not yet supported on Windows. ' +
-          'Please run the installer manually:\n' +
-          '  npm install -g oh-my-claudecode\n' +
-          'Or visit: https://github.com/Yeachan-Heo/oh-my-claude-sisyphus'
-        );
+        // Use npm for Windows updates instead of bash script
+        try {
+          execSync('npm install -g oh-my-claudecode@latest', {
+            encoding: 'utf-8',
+            stdio: options?.verbose ? 'inherit' : 'pipe',
+            timeout: 120000, // 2 minute timeout for npm
+            windowsHide: true
+          });
+
+          // Update version metadata for npm install
+          saveVersionMetadata({
+            version: newVersion,
+            installedAt: new Date().toISOString(),
+            installMethod: 'npm',
+            lastCheckAt: new Date().toISOString()
+          });
+
+          return {
+            success: true,
+            previousVersion,
+            newVersion,
+            message: `Successfully updated from ${previousVersion ?? 'unknown'} to ${newVersion} via npm`
+          };
+        } catch (npmError) {
+          throw new Error(
+            'Auto-update via npm failed. Please run manually:\n' +
+            '  npm install -g oh-my-claudecode@latest\n' +
+            `Error: ${npmError instanceof Error ? npmError.message : npmError}`
+          );
+        }
       }
 
       execSync(`bash "${tempScript}"`, {

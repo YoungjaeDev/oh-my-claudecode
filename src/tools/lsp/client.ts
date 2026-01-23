@@ -7,7 +7,7 @@
 
 import { spawn, ChildProcess } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { resolve, dirname, parse, join } from 'path';
 import type { LspServerConfig } from './servers.js';
 import { getServerForFile, commandExists } from './servers.js';
 
@@ -579,9 +579,17 @@ class LspClientManager {
     let dir = dirname(resolve(filePath));
     const markers = ['package.json', 'tsconfig.json', 'pyproject.toml', 'Cargo.toml', 'go.mod', '.git'];
 
-    while (dir !== '/') {
+    // Cross-platform root detection
+    while (true) {
+      const parsed = parse(dir);
+      // On Windows: C:\ has root === dir, On Unix: / has root === dir
+      if (parsed.root === dir) {
+        break;
+      }
+
       for (const marker of markers) {
-        if (existsSync(`${dir}/${marker}`)) {
+        const markerPath = join(dir, marker);
+        if (existsSync(markerPath)) {
           return dir;
         }
       }

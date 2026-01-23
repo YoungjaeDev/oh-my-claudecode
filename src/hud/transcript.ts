@@ -12,6 +12,7 @@
 
 import { createReadStream, existsSync, statSync, openSync, readSync, closeSync } from 'fs';
 import { createInterface } from 'readline';
+import { basename } from 'path';
 import type { TranscriptData, ActiveAgent, TodoItem, SkillInvocation, PendingPermission, ThinkingState } from './types.js';
 
 // Performance constants
@@ -231,8 +232,7 @@ function extractTargetSummary(input: unknown, toolName: string): string {
     const filePath = inp.file_path as string | undefined;
     if (filePath) {
       // Return just the filename or last path segment
-      const segments = filePath.split('/');
-      return segments[segments.length - 1] || filePath;
+      return basename(filePath) || filePath;
     }
   }
 
