@@ -6,7 +6,7 @@
  * Cross-platform: Windows, macOS, Linux
  */
 
-import { existsSync, readFileSync, readdirSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -46,6 +46,37 @@ function countIncompleteTodos(todosDir) {
   return count;
 }
 
+// Load sisyphus-core guidelines from plugin
+function loadSisyphusCore() {
+  // Try plugin root first (when installed as plugin)
+  const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+  const possiblePaths = [];
+  
+  if (pluginRoot) {
+    possiblePaths.push(join(pluginRoot, 'skills', 'sisyphus-core', 'SKILL.md'));
+  }
+  
+  // Fallback: relative to script location (development)
+  const scriptDir = new URL('.', import.meta.url).pathname;
+  possiblePaths.push(join(scriptDir, '..', 'skills', 'sisyphus-core', 'SKILL.md'));
+  
+  for (const skillPath of possiblePaths) {
+    if (existsSync(skillPath)) {
+      try {
+        const content = readFileSync(skillPath, 'utf-8');
+        // Extract body after frontmatter
+        const match = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n([\s\S]*)$/);
+        if (match && match[1].trim()) {
+          return match[1].trim();
+        }
+      } catch {
+        // Ignore read errors
+      }
+    }
+  }
+  return null;
+}
+
 // Check if HUD is properly installed
 function checkHudInstallation() {
   const hudScript = join(homedir(), '.claude', 'hud', 'sisyphus-hud.mjs');
@@ -82,6 +113,14 @@ async function main() {
 
     const directory = data.directory || process.cwd();
     const messages = [];
+
+    // Inject sisyphus-core guidelines (always)
+    const coreGuidelines = loadSisyphusCore();
+    if (coreGuidelines) {
+      messages.push(`<sisyphus-core>
+${coreGuidelines}
+</sisyphus-core>`);
+    }
 
     // Check HUD installation (one-time setup guidance)
     const hudCheck = checkHudInstallation();
