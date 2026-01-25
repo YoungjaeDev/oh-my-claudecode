@@ -720,161 +720,6 @@ Delegate tasks to specialized agents using the Task tool:
 - NEVER leave work incomplete
 CMD_EOF
 
-# omc-default mode command (project-scoped)
-cat > "$CLAUDE_CONFIG_DIR/commands/omc-default.md" << 'CMD_EOF'
----
-description: Configure oh-my-claudecode in local project (.claude/CLAUDE.md)
----
-
-$ARGUMENTS
-
-## Task: Configure oh-my-claudecode Default Mode (Project-Scoped)
-
-**CRITICAL**: This skill ALWAYS downloads fresh CLAUDE.md from GitHub to your local project. DO NOT use the Write tool - use bash curl exclusively.
-
-### Step 1: Create Local .claude Directory
-
-Ensure the local project has a .claude directory:
-
-```bash
-# Create .claude directory in current project
-mkdir -p .claude && echo "✅ .claude directory created" || echo "❌ Failed to create .claude directory"
-```
-
-### Step 2: Download Fresh CLAUDE.md (MANDATORY)
-
-Execute this bash command to download fresh CLAUDE.md to local project config:
-
-```bash
-# Download fresh CLAUDE.md to project-local .claude/
-curl -fsSL "https://raw.githubusercontent.com/Yeachan-Heo/oh-my-claude-sisyphus/main/docs/CLAUDE.md" -o .claude/CLAUDE.md && \
-echo "✅ CLAUDE.md downloaded successfully to .claude/CLAUDE.md" || \
-echo "❌ Failed to download CLAUDE.md"
-```
-
-**MANDATORY**: Always run this command. Do NOT skip. Do NOT use Write tool.
-
-**FALLBACK** if curl fails:
-Tell user to manually download from:
-https://raw.githubusercontent.com/Yeachan-Heo/oh-my-claude-sisyphus/main/docs/CLAUDE.md
-
-### Step 3: Verify Plugin Installation
-
-The oh-my-claudecode plugin provides all hooks automatically via the plugin system. Verify the plugin is enabled:
-
-```bash
-grep -q "oh-my-claudecode" ~/.claude/settings.json && echo "Plugin enabled" || echo "Plugin NOT enabled"
-```
-
-If plugin is not enabled, instruct user:
-> Run: `claude /install-plugin oh-my-claudecode` to enable the plugin.
-
-### Step 4: Confirm Success
-
-After completing all steps, report:
-
-✅ **oh-my-claudecode Project Configuration Complete**
-- CLAUDE.md: Updated with latest configuration from GitHub at ./.claude/CLAUDE.md
-- Scope: **PROJECT** - applies only to this project
-- Hooks: Provided by plugin (no manual installation needed)
-- Agents: 19+ available (base + tiered variants)
-- Model routing: Haiku/Sonnet/Opus based on task complexity
-
-**Note**: This configuration is project-specific and won't affect other projects or global settings.
-
----
-
-## 🔄 Keeping Up to Date
-
-After installing oh-my-claudecode updates (via npm or plugin update), run `/omc-default` again in your project to get the latest CLAUDE.md configuration. This ensures you have the newest features and agent configurations.
-
----
-
-## 🌍 Global vs Project Configuration
-
-- **`/omc-default`** (this command): Creates `./.claude/CLAUDE.md` in your current project
-- **`/omc-default-global`**: Creates `~/.claude/CLAUDE.md` for all projects
-
-Project-scoped configuration takes precedence over global configuration.
-CMD_EOF
-
-# omc-default-global mode command (global)
-cat > "$CLAUDE_CONFIG_DIR/commands/omc-default-global.md" << 'CMD_EOF'
----
-description: Configure oh-my-claudecode globally in ~/.claude/CLAUDE.md
----
-
-$ARGUMENTS
-
-## Task: Configure oh-my-claudecode Default Mode (Global)
-
-**CRITICAL**: This skill ALWAYS downloads fresh CLAUDE.md from GitHub to your global config. DO NOT use the Write tool - use bash curl exclusively.
-
-### Step 1: Download Fresh CLAUDE.md (MANDATORY)
-
-Execute this bash command to erase and download fresh CLAUDE.md to global config:
-
-```bash
-# Remove existing CLAUDE.md and download fresh from GitHub
-rm -f ~/.claude/CLAUDE.md && \
-curl -fsSL "https://raw.githubusercontent.com/Yeachan-Heo/oh-my-claude-sisyphus/main/docs/CLAUDE.md" -o ~/.claude/CLAUDE.md && \
-echo "✅ CLAUDE.md downloaded successfully to ~/.claude/CLAUDE.md" || \
-echo "❌ Failed to download CLAUDE.md"
-```
-
-**MANDATORY**: Always run this command. Do NOT skip. Do NOT use Write tool.
-
-**FALLBACK** if curl fails:
-Tell user to manually download from:
-https://raw.githubusercontent.com/Yeachan-Heo/oh-my-claude-sisyphus/main/docs/CLAUDE.md
-
-### Step 2: Clean Up Legacy Hooks (if present)
-
-Check if old manual hooks exist and remove them to prevent duplicates:
-
-```bash
-# Remove legacy bash hook scripts (now handled by plugin system)
-rm -f ~/.claude/hooks/keyword-detector.sh
-rm -f ~/.claude/hooks/stop-continuation.sh
-rm -f ~/.claude/hooks/persistent-mode.sh
-rm -f ~/.claude/hooks/session-start.sh
-```
-
-Check `~/.claude/settings.json` for manual hook entries. If the "hooks" key exists with UserPromptSubmit, Stop, or SessionStart entries pointing to bash scripts, inform the user:
-
-> **Note**: Found legacy hooks in settings.json. These should be removed since the plugin now provides hooks automatically. Remove the "hooks" section from ~/.claude/settings.json to prevent duplicate hook execution.
-
-### Step 3: Verify Plugin Installation
-
-The oh-my-claudecode plugin provides all hooks automatically via the plugin system. Verify the plugin is enabled:
-
-```bash
-grep -q "oh-my-claudecode" ~/.claude/settings.json && echo "Plugin enabled" || echo "Plugin NOT enabled"
-```
-
-If plugin is not enabled, instruct user:
-> Run: `claude /install-plugin oh-my-claudecode` to enable the plugin.
-
-### Step 4: Confirm Success
-
-After completing all steps, report:
-
-✅ **oh-my-claudecode Global Configuration Complete**
-- CLAUDE.md: Updated with latest configuration from GitHub at ~/.claude/CLAUDE.md
-- Scope: **GLOBAL** - applies to all Claude Code sessions
-- Hooks: Provided by plugin (no manual installation needed)
-- Agents: 19+ available (base + tiered variants)
-- Model routing: Haiku/Sonnet/Opus based on task complexity
-
-**Note**: Hooks are now managed by the plugin system automatically. No manual hook installation required.
-
----
-
-## 🔄 Keeping Up to Date
-
-After installing oh-my-claudecode updates (via npm or plugin update), run `/omc-default-global` again to get the latest CLAUDE.md configuration. This ensures you have the newest features and agent configurations.
-CMD_EOF
-
 # Plan command (Prometheus planning system)
 cat > "$CLAUDE_CONFIG_DIR/commands/plan.md" << 'CMD_EOF'
 ---
@@ -1003,57 +848,7 @@ Plans are saved to `.omc/plans/` for later execution with `/sisyphus`.
 Tell me about what you want to build or accomplish. I'll ask questions to understand the full scope before creating a plan.
 CMD_EOF
 
-# Ralph Loop Command
-cat > "$CLAUDE_CONFIG_DIR/commands/ralph-loop.md" << 'CMD_EOF'
----
-description: Start self-referential development loop until task completion
----
-
-[RALPH LOOP ACTIVATED]
-
-$ARGUMENTS
-
-## How Ralph Loop Works
-
-You are starting a Ralph Loop - a self-referential development loop that runs until task completion.
-
-1. Work on the task continuously and thoroughly
-2. When the task is FULLY complete, output: `<promise>DONE</promise>`
-3. If you stop without the promise tag, the loop will remind you to continue
-4. Maximum iterations: 100 (configurable)
-
-## Exit Conditions
-
-- **Completion**: Output `<promise>DONE</promise>` when fully done
-- **Cancel**: User runs `/cancel-ralph`
-- **Max Iterations**: Loop stops at limit
-
-## Guidelines
-
-- Break the task into steps and work through them systematically
-- Test your work as you go
-- Don't output the promise until you've verified everything works
-- Be thorough - the loop exists so you can take your time
-
----
-
-Begin working on the task. Remember to output `<promise>DONE</promise>` when complete.
-CMD_EOF
-
-# Cancel Ralph Command
-cat > "$CLAUDE_CONFIG_DIR/commands/cancel-ralph.md" << 'CMD_EOF'
----
-description: Cancel active Ralph Loop
----
-
-[RALPH LOOP CANCELLED]
-
-The Ralph Loop has been cancelled. You can stop working on the current task.
-
-If you want to start a new loop, use `/ralph-loop "task description"`.
-CMD_EOF
-
-echo -e "${GREEN}✓ Installed 10 slash commands${NC}"
+echo -e "${GREEN}✓ Installed 8 slash commands${NC}"
 
 echo -e "${BLUE}[5/6]${NC} Installing hook scripts..."
 mkdir -p "$CLAUDE_CONFIG_DIR/hooks"
@@ -1724,16 +1519,14 @@ Use the Task tool to delegate to specialized agents:
 | Command | Description |
 |---------|-------------|
 | `/orchestrate <task>` | Activate OMC multi-agent orchestration |
-| `/omc-default` | Configure OMC for current project (./.claude/CLAUDE.md) |
-| `/omc-default-global` | Configure OMC globally (~/.claude/CLAUDE.md) |
+| `/omc-setup` | Configure OMC (--local for project, --global for all) |
 | `/ultrawork <task>` | Maximum performance mode with parallel agents |
 | `/deepsearch <query>` | Thorough codebase search |
 | `/analyze <target>` | Deep analysis and investigation |
-| `/plan <description>` | Start planning session with Planner |
+| `/plan <description>` | Start planning session |
 | `/review [plan-path]` | Review a plan with Critic |
-| `/planner <task>` | Strategic planning with interview workflow |
 | `/ralph <task>` | Self-referential loop until task completion |
-| `/cancel-ralph` | Cancel active Ralph Loop |
+| `/cancel` | Cancel active loops/modes |
 
 ## Planning Workflow
 
@@ -1833,8 +1626,7 @@ echo "  claude                        # Start Claude Code normally"
 echo ""
 echo -e "${YELLOW}Slash Commands:${NC}"
 echo "  /sisyphus <task>              # Activate Sisyphus orchestration mode"
-echo "  /omc-default                  # Configure for current project"
-echo "  /omc-default-global           # Configure globally"
+echo "  /omc-setup                    # Configure OMC (--local or --global)"
 echo "  /ultrawork <task>             # Maximum performance mode"
 echo "  /deepsearch <query>           # Thorough codebase search"
 echo "  /analyze <target>             # Deep analysis mode"
@@ -1871,12 +1663,11 @@ echo "  # Or run this install script again:"
 echo "  curl -fsSL https://raw.githubusercontent.com/Yeachan-Heo/oh-my-claude-sisyphus/main/scripts/install.sh | bash"
 echo ""
 echo -e "${YELLOW}After Updates:${NC}"
-echo "  Run '/omc-default' (project) or '/omc-default-global' (global)"
-echo "  to download the latest CLAUDE.md configuration."
-echo "  This ensures you get the newest features and agent behaviors."
+echo "  Run '/omc-setup' to download the latest CLAUDE.md configuration."
+echo "  Use '--local' for project or '--global' for all projects."
 echo ""
 echo -e "${BLUE}Quick Start:${NC}"
 echo "  1. Run 'claude' to start Claude Code"
-echo "  2. Type '/omc-default' for project config or '/omc-default-global' for global"
+echo "  2. Type '/omc-setup' for configuration wizard"
 echo "  3. Or use '/sisyphus <task>' for one-time activation"
 echo ""

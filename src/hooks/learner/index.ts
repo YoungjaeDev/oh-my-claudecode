@@ -23,6 +23,19 @@ export * from './detector.js';
 export * from './detection-hook.js';
 export * from './promotion.js';
 export * from './config.js';
+export * from './matcher.js';
+export * from './auto-invoke.js';
+// Note: auto-learner exports are renamed to avoid collision with ralph's recordPattern
+export {
+  type PatternDetection,
+  type AutoLearnerState,
+  initAutoLearner,
+  calculateSkillWorthiness,
+  extractTriggers,
+  getSuggestedSkills,
+  patternToSkillMetadata,
+  recordPattern as recordSkillPattern,
+} from './auto-learner.js';
 
 /**
  * Session cache for tracking injected skills.

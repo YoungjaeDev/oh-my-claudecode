@@ -141,7 +141,7 @@ export function startUltraQA(
   if (isRalphLoopActive(directory)) {
     return {
       success: false,
-      error: 'Cannot start UltraQA while Ralph Loop is active. Cancel Ralph Loop first with /oh-my-claudecode:cancel-ralph.'
+      error: 'Cannot start UltraQA while Ralph Loop is active. Cancel Ralph Loop first with /oh-my-claudecode:cancel.'
     };
   }
 

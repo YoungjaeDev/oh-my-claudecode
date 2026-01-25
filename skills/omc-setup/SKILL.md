@@ -338,14 +338,14 @@ That's it! Just use Claude Code normally.
 OMC Setup Complete! (Upgraded from 2.x)
 
 GOOD NEWS: Your existing commands still work!
-- /ralph, /ultrawork, /planner, etc. all still function
+- /ralph, /ultrawork, /plan, etc. all still function
 
 WHAT'S NEW in 3.0:
 You no longer NEED those commands. Everything is automatic now:
 - Just say "don't stop until done" instead of /ralph
 - Just say "fast" or "parallel" instead of /ultrawork
-- Just say "plan this" instead of /planner
-- Just say "stop" instead of /cancel-ralph
+- Just say "plan this" instead of /plan
+- Just say "stop" instead of /cancel
 
 MAGIC KEYWORDS (power-user shortcuts):
 | Keyword | Same as old... | Example |
@@ -354,7 +354,7 @@ MAGIC KEYWORDS (power-user shortcuts):
 | ralplan | /ralplan | "ralplan this feature" |
 | ulw | /ultrawork | "ulw refactor API" |
 | eco | (new!) | "eco fix all errors" |
-| plan | /planner | "plan the endpoints" |
+| plan | /plan | "plan the endpoints" |
 
 HUD STATUSLINE:
 The status bar now shows OMC state. Restart Claude Code to see it.

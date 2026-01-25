@@ -65,7 +65,7 @@ When you detect these patterns, you MUST invoke the corresponding skill:
 | Pattern Detected | MUST Invoke Skill |
 |------------------|-------------------|
 | "autopilot", "build me", "I want a" | `autopilot` |
-| Broad/vague request | `planner` (after explore for context) |
+| Broad/vague request | `plan` (after explore for context) |
 | "don't stop", "must complete", "ralph" | `ralph` |
 | "ulw", "ultrawork" | `ultrawork` (explicit, always) |
 | "eco", "ecomode", "efficient", "save-tokens", "budget" | `ecomode` (explicit, always) |
@@ -73,7 +73,7 @@ When you detect these patterns, you MUST invoke the corresponding skill:
 | "ultrapilot", "parallel build", "swarm build" | `ultrapilot` |
 | "swarm", "coordinated agents" | `swarm` |
 | "pipeline", "chain agents" | `pipeline` |
-| "plan this", "plan the" | `plan` or `planner` |
+| "plan this", "plan the" | `plan` |
 | "ralplan" keyword | `ralplan` |
 | UI/component/styling work | `frontend-ui-ux` (silent) |
 | Git/commit work | `git-master` (silent) |
@@ -177,7 +177,7 @@ When you detect phrases like "autopilot", "build me", or "I want a", activate au
 - Self-correction until completion
 - No manual intervention required
 
-Autopilot combines the best of ralph (persistence), ultrawork (parallelism), and planner (strategic thinking) into a single streamlined experience.
+Autopilot combines the best of ralph (persistence), ultrawork (parallelism), and plan (strategic thinking) into a single streamlined experience.
 
 ### Zero Learning Curve
 
@@ -189,7 +189,7 @@ Users don't need to learn commands. You detect intent and activate behaviors aut
 |-------------------|---------------------|
 | "autopilot", "build me", "I want a" | Activate autopilot for full autonomous execution |
 | Complex task | Delegate to specialist agents in parallel |
-| "plan this" / broad request | Start planning interview via planner |
+| "plan this" / broad request | Start planning interview via plan |
 | "don't stop until done" | Activate ralph-loop for persistence |
 | UI/frontend work | Activate design sensibility + delegate to designer |
 | "fast" / "parallel" | Activate default execution mode (ultrawork or ecomode per config) |
@@ -227,8 +227,7 @@ User says "stop", "cancel", "abort" → Invoke unified `cancel` skill (automatic
 | `orchestrate` | Core multi-agent orchestration | Always active | - |
 | `ralph` | Persistence until verified complete | "don't stop", "must complete" | `/oh-my-claudecode:ralph` |
 | `ultrawork` | Maximum parallel execution | "ulw", "ultrawork" (also "fast"/"parallel" per config) | `/oh-my-claudecode:ultrawork` |
-| `planner` | Strategic planning WITH interview workflow | "plan this", broad requests | `/oh-my-claudecode:planner` |
-| `plan` | Quick planning session (no interview) | "plan" keyword | `/oh-my-claudecode:plan` |
+| `plan` | Planning session with interview workflow | "plan this", "plan the", broad requests | `/oh-my-claudecode:plan` |
 | `ralplan` | Iterative planning (Planner+Architect+Critic) | "ralplan" keyword | `/oh-my-claudecode:ralplan` |
 | `review` | Review plan with Critic | "review plan" | `/oh-my-claudecode:review` |
 | `analyze` | Deep analysis/investigation | "analyze", "debug", "why" | `/oh-my-claudecode:analyze` |
@@ -243,23 +242,17 @@ User says "stop", "cancel", "abort" → Invoke unified `cancel` skill (automatic
 | `doctor` | Diagnose installation issues | - | `/oh-my-claudecode:doctor` |
 | `help` | Show OMC usage guide | - | `/oh-my-claudecode:help` |
 | `omc-setup` | One-time setup wizard | - | `/oh-my-claudecode:omc-setup` |
-| `omc-default` | Configure local project | - | (internal) |
-| `omc-default-global` | Configure global settings | - | (internal) |
 | `ralph-init` | Initialize PRD for structured ralph | - | `/oh-my-claudecode:ralph-init` |
 | `release` | Automated release workflow | - | `/oh-my-claudecode:release` |
 | `ultrapilot` | Parallel autopilot (3-5x faster) | "ultrapilot", "parallel build", "swarm build" | `/oh-my-claudecode:ultrapilot` |
 | `swarm` | N coordinated agents with task claiming | "swarm N agents" | `/oh-my-claudecode:swarm` |
 | `pipeline` | Sequential agent chaining | "pipeline", "chain" | `/oh-my-claudecode:pipeline` |
 | `cancel` | Unified cancellation for all modes | "stop", "cancel" | `/oh-my-claudecode:cancel` |
-| `cancel-autopilot` | Cancel active autopilot (deprecated - use `cancel`) | - | `/oh-my-claudecode:cancel-autopilot` |
-| `cancel-ralph` | Cancel ralph loop (deprecated - use `cancel`) | - | `/oh-my-claudecode:cancel-ralph` |
-| `cancel-ultrawork` | Cancel ultrawork (deprecated - use `cancel`) | - | `/oh-my-claudecode:cancel-ultrawork` |
-| `cancel-ultraqa` | Cancel ultraqa (deprecated - use `cancel`) | - | `/oh-my-claudecode:cancel-ultraqa` |
 | `ecomode` | Token-efficient parallel execution | "eco", "efficient", "budget" | `/oh-my-claudecode:ecomode` |
-| `cancel-ecomode` | Cancel ecomode (deprecated - use `cancel`) | - | `/oh-my-claudecode:cancel-ecomode` |
 | `research` | Parallel scientist orchestration | "research", "analyze data", "statistics" | `/oh-my-claudecode:research` |
 | `tdd` | TDD enforcement: test-first development | "tdd", "test first" | `/oh-my-claudecode:tdd` |
 | `mcp-setup` | Configure MCP servers for extended capabilities | "setup mcp", "configure mcp" | `/oh-my-claudecode:mcp-setup` |
+| `learn-about-omc` | Usage pattern analysis | - | `/oh-my-claudecode:learn-about-omc` |
 
 ### All 32 Agents
 
@@ -452,14 +445,14 @@ A request is BROAD and needs planning if ANY of:
 **When BROAD REQUEST detected:**
 1. Invoke `explore` agent to understand codebase
 2. Optionally invoke `architect` for guidance
-3. THEN invoke `planner` skill with gathered context
-4. Planner asks ONLY user-preference questions
+3. THEN invoke `plan` skill with gathered context
+4. Plan skill asks ONLY user-preference questions
 
 ### AskUserQuestion in Planning
 
 When in planning/interview mode, use the `AskUserQuestion` tool for preference questions instead of plain text. This provides a clickable UI for faster user responses.
 
-**Applies to**: Planner agent, plan skill, planning interviews
+**Applies to**: Plan skill, planning interviews
 **Question types**: Preference, Requirement, Scope, Constraint, Risk tolerance
 
 ### Mandatory Architect Verification

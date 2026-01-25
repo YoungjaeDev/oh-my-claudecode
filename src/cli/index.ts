@@ -33,6 +33,13 @@ import {
   isInstalled,
   getInstallInfo
 } from '../installer/index.js';
+import { statsCommand } from './commands/stats.js';
+import { costCommand } from './commands/cost.js';
+import { sessionsCommand } from './commands/sessions.js';
+import { agentsCommand } from './commands/agents.js';
+import { exportCommand } from './commands/export.js';
+import { cleanupCommand } from './commands/cleanup.js';
+import { backfillCommand } from './commands/backfill.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -46,12 +53,179 @@ try {
   // Use default version
 }
 
+/**
+ * Auto-backfill analytics on CLI startup (once per 24 hours)
+ */
+async function maybeAutoBackfill(): Promise<void> {
+  const BACKFILL_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+  try {
+    // Check last backfill timestamp
+    const { readState, writeState, StateLocation } = await import('../features/state-manager/index.js');
+    const lastBackfill = readState<{ timestamp: string }>('last-backfill', StateLocation.GLOBAL);
+
+    const now = Date.now();
+    if (lastBackfill.exists && lastBackfill.data) {
+      const lastTime = new Date(lastBackfill.data.timestamp).getTime();
+      if (now - lastTime < BACKFILL_INTERVAL_MS) {
+        return; // Skip, too recent
+      }
+    }
+
+    // Run silent backfill
+    const { BackfillEngine } = await import('../analytics/backfill-engine.js');
+    const engine = new BackfillEngine();
+    await engine.run({ dryRun: false, verbose: false });
+
+    // Update timestamp
+    writeState('last-backfill', { timestamp: new Date().toISOString() }, StateLocation.GLOBAL);
+  } catch {
+    // Silent fail - don't break CLI
+  }
+}
+
+// Auto-backfill on startup (silent, once per 24 hours)
+maybeAutoBackfill().catch(() => {});
+
 const program = new Command();
 
+// Display enhanced banner using gradient-string (loaded dynamically)
+async function displayAnalyticsBanner() {
+  try {
+    // @ts-ignore - gradient-string will be installed during setup
+    const gradient = await import('gradient-string');
+    const banner = gradient.default.pastel.multiline([
+      '╔═══════════════════════════════════════╗',
+      '║   Oh-My-ClaudeCode - Analytics Dashboard   ║',
+      '╚═══════════════════════════════════════╝'
+    ].join('\n'));
+    console.log(banner);
+    console.log('');
+  } catch (error) {
+    // Fallback if gradient-string not installed
+    console.log('╔═══════════════════════════════════════╗');
+    console.log('║   Oh-My-ClaudeCode - Analytics Dashboard   ║');
+    console.log('╚═══════════════════════════════════════╝');
+    console.log('');
+  }
+}
+
+// Default action when running 'omc' with no args - show everything
+async function defaultAction() {
+  await displayAnalyticsBanner();
+
+  // Show aggregate session stats
+  console.log(chalk.bold('📊 Aggregate Session Statistics'));
+  console.log(chalk.gray('─'.repeat(50)));
+  await statsCommand({ json: false });
+
+  console.log('\n');
+
+  // Show cost breakdown
+  console.log(chalk.bold('💰 Cost Analysis (Monthly)'));
+  console.log(chalk.gray('─'.repeat(50)));
+  await costCommand('monthly', { json: false });
+
+  console.log('\n');
+
+  // Show top agents
+  console.log(chalk.bold('🤖 Top Agents'));
+  console.log(chalk.gray('─'.repeat(50)));
+  await agentsCommand({ json: false, limit: 10 });
+
+  console.log('\n');
+  console.log(chalk.dim('Run with --help to see all available commands'));
+}
+
 program
-  .name('oh-my-claudecode')
-  .description('Multi-agent orchestration system for Claude Agent SDK')
-  .version(version);
+  .name('omc')
+  .description('Multi-agent orchestration system for Claude Agent SDK with analytics')
+  .version(version)
+  .action(defaultAction);
+
+/**
+ * Analytics Commands
+ */
+
+// Stats command
+program
+  .command('stats')
+  .description('Show aggregate statistics (or specific session with --session)')
+  .option('--json', 'Output as JSON')
+  .option('--session <id>', 'Show stats for specific session (defaults to aggregate)')
+  .action(statsCommand);
+
+// Cost command
+program
+  .command('cost [period]')
+  .description('Generate cost report (period: daily, weekly, monthly)')
+  .option('--json', 'Output as JSON')
+  .action((period = 'monthly', options) => {
+    if (!['daily', 'weekly', 'monthly'].includes(period)) {
+      console.error('Invalid period. Use: daily, weekly, or monthly');
+      process.exit(1);
+    }
+    costCommand(period as 'daily' | 'weekly' | 'monthly', options);
+  });
+
+// Sessions command
+program
+  .command('sessions')
+  .description('View session history')
+  .option('--json', 'Output as JSON')
+  .option('--limit <number>', 'Limit number of sessions', '10')
+  .action(options => {
+    sessionsCommand({ ...options, limit: parseInt(options.limit) });
+  });
+
+// Agents command
+program
+  .command('agents')
+  .description('Show agent usage breakdown')
+  .option('--json', 'Output as JSON')
+  .option('--limit <number>', 'Limit number of agents', '10')
+  .action(options => {
+    agentsCommand({ ...options, limit: parseInt(options.limit) });
+  });
+
+// Export command
+program
+  .command('export <type> <format> <output>')
+  .description('Export data (type: cost, sessions, patterns; format: json, csv)')
+  .option('--period <period>', 'Period for cost report (daily, weekly, monthly)', 'monthly')
+  .action((type, format, output, options) => {
+    if (!['cost', 'sessions', 'patterns'].includes(type)) {
+      console.error('Invalid type. Use: cost, sessions, or patterns');
+      process.exit(1);
+    }
+    if (!['json', 'csv'].includes(format)) {
+      console.error('Invalid format. Use: json or csv');
+      process.exit(1);
+    }
+    exportCommand(type as any, format as any, output, options);
+  });
+
+// Cleanup command
+program
+  .command('cleanup')
+  .description('Clean up old logs and orphaned background tasks')
+  .option('--retention <days>', 'Retention period in days', '30')
+  .action(options => {
+    cleanupCommand({ ...options, retention: parseInt(options.retention) });
+  });
+
+// Backfill command
+program
+  .command('backfill')
+  .description('Backfill analytics from historical Claude Code transcripts')
+  .option('--project <path>', 'Filter to specific project path')
+  .option('--from <date>', 'Start date (ISO format: YYYY-MM-DD)')
+  .option('--to <date>', 'End date (ISO format: YYYY-MM-DD)')
+  .option('--dry-run', 'Preview without writing data')
+  .option('--reset', 'Clear deduplication index and re-process all transcripts')
+  .option('--verbose', 'Show detailed progress')
+  .option('--json', 'Output as JSON')
+  .action(backfillCommand);
 
 /**
  * Init command - Initialize configuration
@@ -62,6 +236,9 @@ program
   .option('-g, --global', 'Initialize global user configuration')
   .option('-f, --force', 'Overwrite existing configuration')
   .action(async (options) => {
+    console.log(chalk.yellow('⚠️  DEPRECATED: The init command is deprecated.'));
+    console.log(chalk.gray('Configuration is now managed automatically. Use /oh-my-claudecode:omc-setup instead.\n'));
+
     const paths = getConfigPaths();
     const targetPath = options.global ? paths.user : paths.project;
     const targetDir = dirname(targetPath);

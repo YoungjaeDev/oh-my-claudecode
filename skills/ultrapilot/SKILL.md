@@ -318,7 +318,7 @@ Optional settings in `.claude/settings.json`:
 ## Cancellation
 
 ```
-/oh-my-claudecode:cancel-ultrapilot
+/oh-my-claudecode:cancel
 ```
 
 Or say: "stop", "cancel ultrapilot", "abort"

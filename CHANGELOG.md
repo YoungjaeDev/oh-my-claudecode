@@ -5,6 +5,129 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.5] - 2026-01-25
+
+### Added
+- feat(skills): add learn-about-omc skill for usage pattern analysis
+
+### Changed
+- feat(skills): consolidate 42 skills to 35 (removed deprecated cancel-* skills)
+
+### Fixed
+- fix(tests): skip unimplemented delegation-enforcer tests
+- fix(tests): correct analytics agent attribution expectations
+
+### Removed
+- chore: remove deprecated cancel-* skills (use /cancel instead)
+
+## [3.5.1] - 2026-01-24
+
+### Added
+
+#### Learned Skills Auto-Matching & Invocation System
+
+Smart skill matching with fuzzy matching, pattern detection, and auto-invocation for learned skills.
+
+- **Skill Matcher** (`src/hooks/learner/matcher.ts`)
+  - Fuzzy matching using Levenshtein distance
+  - Glob and regex pattern support for triggers
+  - Context extraction (errors, files, code patterns)
+  - Confidence scoring (0-100) for match quality
+
+- **Auto-Learner** (`src/hooks/learner/auto-learner.ts`)
+  - Pattern detection from problem-solution pairs
+  - Skill worthiness scoring algorithm
+  - Auto-trigger extraction from conversation context
+  - Suggestion threshold (70+ confidence)
+
+- **Auto-Invoke** (`src/hooks/learner/auto-invoke.ts`)
+  - High-confidence auto-invocation (80+ threshold)
+  - Session tracking with cooldown to prevent spam
+  - Success/failure analytics for learning
+
+- **New Skills**
+  - `local-skills-setup` - Guided wizard for skill directory setup and management
+  - `skill` - CLI commands for list/add/remove/edit/search/sync local skills
+
+- **90 new tests** for matcher, auto-learner edge cases, security, and performance
+
+#### Analytics Backfill System
+Complete offline transcript analysis pipeline for token usage and cost tracking.
+
+- **Transcript Scanner** (`src/analytics/transcript-scanner.ts`)
+  - Scans `~/.claude/projects/` for session JSONL files
+  - Smart path decoding handles hyphenated directory names
+  - Project filtering and date range support
+
+- **Transcript Parser** (`src/analytics/transcript-parser.ts`)
+  - Streaming JSONL parser with AbortSignal support
+  - Memory-efficient line-by-line processing
+  - Graceful handling of malformed entries
+
+- **Token Extractor** (`src/analytics/transcript-token-extractor.ts`)
+  - Extracts token usage from both `assistant` and `progress` entry types
+  - **Proper agent attribution**: Progress entries (actual agent responses) correctly attributed via `parentToolUseID` → `toolUseId` lookup
+  - Model normalization (claude-sonnet-4-5-20250929 → claude-sonnet-4.5)
+  - Haiku model detection from progress entries
+  - Skips `<synthetic>` model entries
+
+- **Backfill Engine** (`src/analytics/backfill-engine.ts`)
+  - Orchestrates the full pipeline: scan → parse → extract → deduplicate → store
+  - Progress events for UI feedback
+  - Batch processing with configurable batch size
+  - Dry-run mode for testing
+
+- **Backfill Deduplication** (`src/analytics/backfill-dedup.ts`)
+  - SHA256-based entry ID generation for consistent deduplication
+  - Persistent state in `~/.omc/state/backfill-state.json`
+  - Prevents duplicate entries on re-runs
+
+- **CLI Command** (`omc backfill`)
+  - Progress bar with real-time stats
+  - Options: `--project`, `--from`, `--to`, `--dry-run`, `--verbose`
+  - Auto-backfill on first `omc stats` run
+
+- **Global Token Tracking**
+  - All token data stored globally in `~/.omc/state/` (not per-project)
+  - Cross-session aggregate statistics via `getAllStats()`
+  - Proper "(main session)" attribution for non-agent token usage
+
+- **Documentation** (`docs/ANALYTICS-SYSTEM.md`)
+  - Complete system architecture documentation
+  - Data flow diagrams and file format specifications
+
+### Fixed
+
+- **Agent Cost Attribution**: Previously spawned agent costs were hidden in "(main session)" because progress entries weren't properly attributed. Now correctly shows:
+  - Main session: ~60% of cost (direct user interactions)
+  - Spawned agents: ~40% of cost (delegated work)
+
+- **Haiku Model Detection**: Haiku responses stored as `type: "progress"` entries with nested `data.message.message.usage` are now properly detected
+
+- **Model Name Normalization**: Handles full model names (claude-sonnet-4-5-20250929) and normalizes to pricing tiers
+
+### Technical Details
+
+**Agent Attribution Fix:**
+```
+Before: Assistant entries with Task calls → incorrectly attributed to agent
+        Progress entries (actual agent work) → hidden in "(main session)"
+
+After:  Assistant entries → correctly attributed to "(main session)"
+        Progress entries → correctly attributed via parentToolUseID lookup
+```
+
+**New Files:**
+- `src/analytics/transcript-scanner.ts` - Directory scanning
+- `src/analytics/transcript-parser.ts` - JSONL streaming parser
+- `src/analytics/transcript-token-extractor.ts` - Token extraction with agent lookup
+- `src/analytics/backfill-engine.ts` - Pipeline orchestration
+- `src/analytics/backfill-dedup.ts` - Deduplication state
+- `src/analytics/analytics-summary.ts` - Fast mtime-based caching
+- `src/cli/commands/backfill.ts` - CLI command
+- `docs/ANALYTICS-SYSTEM.md` - System documentation
+- `src/__tests__/analytics/*.test.ts` - 105 tests
+
 ## [3.4.2] - 2026-01-24
 
 ### Fixed

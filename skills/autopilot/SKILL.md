@@ -114,7 +114,7 @@ Optional settings in `.claude/settings.json`:
 ## Cancellation
 
 ```
-/oh-my-claudecode:cancel-autopilot
+/oh-my-claudecode:cancel
 ```
 
 Or say: "stop", "cancel", "abort"

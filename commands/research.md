@@ -73,7 +73,7 @@ AUTO mode runs the complete research workflow autonomously with loop control.
 1. **Max Iterations:** 10
 2. **Continue until:** Promise tag emitted OR max iterations
 3. **State tracking:** Persist after each stage completion
-4. **Cancellation:** `/cancel-research` or "stop", "cancel"
+4. **Cancellation:** `/oh-my-claudecode:cancel` or "stop", "cancel"
 
 ## Session Management
 
@@ -86,7 +86,7 @@ Sessions are stored at `.omc/research/{session-id}/` with:
 ## Cancellation
 
 ```
-/oh-my-claudecode:cancel-research
+/oh-my-claudecode:cancel
 ```
 
 Or say: "stop research", "cancel research", "abort"

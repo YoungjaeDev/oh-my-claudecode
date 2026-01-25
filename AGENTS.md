@@ -202,11 +202,11 @@ Settings live in `~/.claude/settings.json`:
 |---------|-------------|
 | `/oh-my-claudecode:default <task>` | Activate multi-agent orchestration |
 | `/oh-my-claudecode:ultrawork <task>` | Maximum performance mode |
-| `/oh-my-claudecode:plan <description>` | Start planning with Planner |
+| `/oh-my-claudecode:plan <description>` | Start planning session |
 | `/oh-my-claudecode:review [plan]` | Review plan with Critic |
-| `/oh-my-claudecode:ralph-loop <task>` | Self-referential loop |
-| `/oh-my-claudecode:cancel-ralph` | Cancel active Ralph Loop |
-| `/oh-my-claudecode:orchestrator <task>` | Complex task coordination |
+| `/oh-my-claudecode:ralph <task>` | Self-referential loop |
+| `/oh-my-claudecode:cancel` | Cancel active loops/modes |
+| `/oh-my-claudecode:orchestrate <task>` | Complex task coordination |
 | `/oh-my-claudecode:deepsearch <query>` | Thorough codebase search |
 | `/oh-my-claudecode:analyze <target>` | Deep analysis |
 

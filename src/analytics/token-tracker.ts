@@ -1,10 +1,11 @@
 import { readState, writeState, StateLocation } from '../features/state-manager/index.js';
-import { TokenUsage, SessionTokenStats } from './types.js';
+import { TokenUsage, SessionTokenStats, AggregateTokenStats } from './types.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { homedir } from 'os';
 
-const TOKEN_LOG_FILE = '.omc/state/token-tracking.jsonl';
-const SESSION_STATS_FILE = '.omc/state/session-token-stats.json';
+const TOKEN_LOG_FILE = path.join(homedir(), '.omc', 'state', 'token-tracking.jsonl');
+const SESSION_STATS_FILE = path.join(homedir(), '.omc', 'state', 'session-token-stats.json');
 
 export class TokenTracker {
   private currentSessionId: string;
@@ -52,11 +53,10 @@ export class TokenTracker {
   }
 
   private async appendToLog(record: TokenUsage): Promise<void> {
-    const logPath = path.resolve(process.cwd(), TOKEN_LOG_FILE);
-    const logDir = path.dirname(logPath);
+    const logDir = path.dirname(TOKEN_LOG_FILE);
 
     await fs.mkdir(logDir, { recursive: true });
-    await fs.appendFile(logPath, JSON.stringify(record) + '\n', 'utf-8');
+    await fs.appendFile(TOKEN_LOG_FILE, JSON.stringify(record) + '\n', 'utf-8');
   }
 
   private updateSessionStats(record: TokenUsage): void {
@@ -66,13 +66,12 @@ export class TokenTracker {
     this.sessionStats.totalCacheRead += record.cacheReadTokens;
     this.sessionStats.lastUpdate = record.timestamp;
 
-    // Group by agent
-    if (record.agentName) {
-      if (!this.sessionStats.byAgent[record.agentName]) {
-        this.sessionStats.byAgent[record.agentName] = [];
-      }
-      this.sessionStats.byAgent[record.agentName].push(record);
+    // Group by agent (use "(main session)" for entries without agentName)
+    const agentKey = record.agentName || '(main session)';
+    if (!this.sessionStats.byAgent[agentKey]) {
+      this.sessionStats.byAgent[agentKey] = [];
     }
+    this.sessionStats.byAgent[agentKey].push(record);
 
     // Group by model
     if (!this.sessionStats.byModel[record.modelName]) {
@@ -82,14 +81,14 @@ export class TokenTracker {
   }
 
   private async saveSessionStats(): Promise<void> {
-    writeState('session-token-stats', this.sessionStats, StateLocation.LOCAL);
+    writeState('session-token-stats', this.sessionStats, StateLocation.GLOBAL);
   }
 
   async loadSessionStats(sessionId?: string): Promise<SessionTokenStats | null> {
     const sid = sessionId || this.currentSessionId;
 
     // Try to load from state
-    const result = readState<SessionTokenStats>('session-token-stats', StateLocation.LOCAL);
+    const result = readState<SessionTokenStats>('session-token-stats', StateLocation.GLOBAL);
 
     if (result.exists && result.data && result.data.sessionId === sid) {
       this.sessionStats = result.data;
@@ -101,10 +100,8 @@ export class TokenTracker {
   }
 
   private async rebuildStatsFromLog(sessionId: string): Promise<SessionTokenStats | null> {
-    const logPath = path.resolve(process.cwd(), TOKEN_LOG_FILE);
-
     try {
-      const content = await fs.readFile(logPath, 'utf-8');
+      const content = await fs.readFile(TOKEN_LOG_FILE, 'utf-8');
       const lines = content.trim().split('\n');
       const stats = this.initializeSessionStats();
       stats.sessionId = sessionId;
@@ -124,6 +121,100 @@ export class TokenTracker {
 
   getSessionStats(): SessionTokenStats {
     return { ...this.sessionStats };
+  }
+
+  async getAllStats(): Promise<AggregateTokenStats> {
+    const { calculateCost } = await import('./cost-estimator.js');
+
+    const stats: AggregateTokenStats = {
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      totalCacheCreation: 0,
+      totalCacheRead: 0,
+      totalCost: 0,
+      byAgent: {},
+      byModel: {},
+      sessionCount: 0,
+      entryCount: 0,
+      firstEntry: null,
+      lastEntry: null
+    };
+
+    try {
+      const content = await fs.readFile(TOKEN_LOG_FILE, 'utf-8');
+      const lines = content.trim().split('\n').filter(line => line.trim());
+
+      if (lines.length === 0) {
+        return stats;
+      }
+
+      const sessions = new Set<string>();
+
+      for (const line of lines) {
+        const record: TokenUsage = JSON.parse(line);
+        stats.entryCount++;
+
+        // Track unique sessions
+        sessions.add(record.sessionId);
+
+        // Track timestamps
+        if (!stats.firstEntry || record.timestamp < stats.firstEntry) {
+          stats.firstEntry = record.timestamp;
+        }
+        if (!stats.lastEntry || record.timestamp > stats.lastEntry) {
+          stats.lastEntry = record.timestamp;
+        }
+
+        // Aggregate totals
+        stats.totalInputTokens += record.inputTokens;
+        stats.totalOutputTokens += record.outputTokens;
+        stats.totalCacheCreation += record.cacheCreationTokens;
+        stats.totalCacheRead += record.cacheReadTokens;
+
+        // Calculate cost for this record
+        const cost = calculateCost({
+          modelName: record.modelName,
+          inputTokens: record.inputTokens,
+          outputTokens: record.outputTokens,
+          cacheCreationTokens: record.cacheCreationTokens,
+          cacheReadTokens: record.cacheReadTokens
+        });
+        stats.totalCost += cost.totalCost;
+
+        // Aggregate by agent (use "(main session)" for entries without agentName)
+        const agentKey = record.agentName || '(main session)';
+        if (!stats.byAgent[agentKey]) {
+          stats.byAgent[agentKey] = { tokens: 0, cost: 0 };
+        }
+        stats.byAgent[agentKey].tokens += record.inputTokens + record.outputTokens;
+        stats.byAgent[agentKey].cost += cost.totalCost;
+
+        // Aggregate by model
+        if (!stats.byModel[record.modelName]) {
+          stats.byModel[record.modelName] = { tokens: 0, cost: 0 };
+        }
+        stats.byModel[record.modelName].tokens += record.inputTokens + record.outputTokens;
+        stats.byModel[record.modelName].cost += cost.totalCost;
+      }
+
+      stats.sessionCount = sessions.size;
+      return stats;
+    } catch (error) {
+      // If file doesn't exist or is empty, return empty stats
+      return stats;
+    }
+  }
+
+  async getTopAgentsAllSessions(limit: number = 5): Promise<Array<{ agent: string; tokens: number; cost: number }>> {
+    const allStats = await this.getAllStats();
+
+    const agentStats = Object.entries(allStats.byAgent).map(([agent, stats]) => ({
+      agent,
+      tokens: stats.tokens,
+      cost: stats.cost
+    }));
+
+    return agentStats.sort((a, b) => b.cost - a.cost).slice(0, limit);
   }
 
   async getTopAgents(limit: number = 5): Promise<Array<{ agent: string; tokens: number; cost: number }>> {
@@ -149,12 +240,11 @@ export class TokenTracker {
   }
 
   async cleanupOldLogs(retentionDays: number = 30): Promise<number> {
-    const logPath = path.resolve(process.cwd(), TOKEN_LOG_FILE);
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
     try {
-      const content = await fs.readFile(logPath, 'utf-8');
+      const content = await fs.readFile(TOKEN_LOG_FILE, 'utf-8');
       const lines = content.trim().split('\n');
       let kept = 0;
       let removed = 0;
@@ -170,7 +260,7 @@ export class TokenTracker {
         return false;
       });
 
-      await fs.writeFile(logPath, filteredLines.join('\n') + '\n', 'utf-8');
+      await fs.writeFile(TOKEN_LOG_FILE, filteredLines.join('\n') + '\n', 'utf-8');
       return removed;
     } catch (error) {
       return 0;

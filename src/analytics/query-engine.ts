@@ -4,6 +4,7 @@ import { getMetricsCollector, aggregators } from './metrics-collector.js';
 import { calculateCost } from './cost-estimator.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { homedir } from 'os';
 
 export interface TimeRange {
   start: string;
@@ -29,7 +30,7 @@ export interface UsagePattern {
 export class QueryEngine {
   async getCostReport(period: 'daily' | 'weekly' | 'monthly'): Promise<CostReport> {
     const range = this.calculateTimeRange(period);
-    const tokenLogPath = path.resolve(process.cwd(), '.omc/state/token-tracking.jsonl');
+    const tokenLogPath = path.join(homedir(), '.omc', 'state', 'token-tracking.jsonl');
 
     try {
       const content = await fs.readFile(tokenLogPath, 'utf-8');
@@ -94,7 +95,7 @@ export class QueryEngine {
   }
 
   async getUsagePatterns(): Promise<UsagePattern> {
-    const tokenLogPath = path.resolve(process.cwd(), '.omc/state/token-tracking.jsonl');
+    const tokenLogPath = path.join(homedir(), '.omc', 'state', 'token-tracking.jsonl');
     const manager = getSessionManager();
     const history = await manager.getHistory();
 

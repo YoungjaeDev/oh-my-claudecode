@@ -55,6 +55,5 @@ When set as default, saying "fast" or "parallel" will activate ecomode instead o
 
 ## Cancellation
 
-- `/oh-my-claudecode:cancel-ecomode` - Cancel ecomode only
-- `/oh-my-claudecode:cancel` - Cancel any active mode (auto-detects)
+- `/oh-my-claudecode:cancel` - Cancel active mode
 - Say "stop" or "cancel" - Unified cancellation

@@ -9,7 +9,7 @@ Configure Model Context Protocol (MCP) servers to extend Claude Code's capabilit
 
 ## Overview
 
-MCP servers provide additional tools that Claude Code agents can use. This skill helps you configure popular MCP servers in your `~/.claude/settings.json`.
+MCP servers provide additional tools that Claude Code agents can use. This skill helps you configure popular MCP servers using the `claude mcp add` command-line interface.
 
 ## Step 1: Show Available MCP Servers
 
@@ -55,95 +55,51 @@ Do you have a GitHub Personal Access Token?
 - Enter your token, or type 'skip' to configure later
 ```
 
-## Step 3: Update settings.json
+## Step 3: Add MCP Servers Using CLI
 
-Read the current `~/.claude/settings.json` and add/update the `mcpServers` section.
+Use the `claude mcp add` command to configure each MCP server. The CLI automatically handles settings.json updates and merging.
 
 ### Context7 Configuration:
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
-    }
-  }
-}
+```bash
+claude mcp add context7 -- npx -y @upstash/context7-mcp
 ```
 
 ### Exa Web Search Configuration:
-```json
-{
-  "mcpServers": {
-    "exa": {
-      "command": "npx",
-      "args": ["-y", "exa-mcp-server"],
-      "env": {
-        "EXA_API_KEY": "<user-provided-key>"
-      }
-    }
-  }
-}
+```bash
+claude mcp add -e EXA_API_KEY=<user-provided-key> exa -- npx -y exa-mcp-server
 ```
 
 ### Filesystem Configuration:
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "<allowed-directories>"]
-    }
-  }
-}
+```bash
+claude mcp add filesystem -- npx -y @modelcontextprotocol/server-filesystem <allowed-directories>
 ```
 
 ### GitHub Configuration:
-```json
-{
-  "mcpServers": {
-    "github": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "<user-provided-token>"
-      }
-    }
-  }
-}
-```
 
-> Note: GitHub MCP requires Docker. Alternatively, configure as a remote URL: https://api.githubcopilot.com/mcp/
-
-## Step 4: Merge Configuration
-
-When updating settings.json:
-
-1. Read existing file: `~/.claude/settings.json`
-2. Parse as JSON (handle comments with jsonc-parser if needed)
-3. Merge new `mcpServers` entries with existing ones (don't overwrite user's other MCP servers)
-4. Write back to file with proper formatting
-
+**Option 1: Docker (local)**
 ```bash
-# Backup existing settings first
-cp ~/.claude/settings.json ~/.claude/settings.json.bak 2>/dev/null || true
+claude mcp add -e GITHUB_PERSONAL_ACCESS_TOKEN=<user-provided-token> github -- docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server
 ```
 
-Use the Edit tool or Write tool to update the settings file, preserving existing configuration.
+**Option 2: HTTP (remote)**
+```bash
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/
+```
 
-## Step 5: Verify Installation
+> Note: Docker option requires Docker installed. HTTP option is simpler but may have different capabilities.
+
+## Step 4: Verify Installation
 
 After configuration, verify the MCP servers are properly set up:
 
 ```bash
-# Check if settings.json has mcpServers
-grep -q "mcpServers" ~/.claude/settings.json && echo "MCP servers configured" || echo "Configuration may have failed"
-
-# List configured servers
-node -e "const s = require('$HOME/.claude/settings.json'); console.log('Configured MCP servers:', Object.keys(s.mcpServers || {}).join(', ') || 'none')"
+# List configured MCP servers
+claude mcp list
 ```
 
-## Step 6: Show Completion Message
+This will display all configured MCP servers and their status.
+
+## Step 5: Show Completion Message
 
 ```
 MCP Server Configuration Complete!
@@ -154,6 +110,7 @@ CONFIGURED SERVERS:
 NEXT STEPS:
 1. Restart Claude Code for changes to take effect
 2. The configured MCP tools will be available to all agents
+3. Run `claude mcp list` to verify configuration
 
 USAGE TIPS:
 - Context7: Ask about library documentation (e.g., "How do I use React hooks?")
@@ -162,11 +119,15 @@ USAGE TIPS:
 - GitHub: Interact with GitHub repos, issues, and PRs
 
 TROUBLESHOOTING:
-- If MCP servers don't appear, check ~/.claude/settings.json for syntax errors
-- Ensure you have Node.js 18+ installed for npx commands
+- If MCP servers don't appear, run `claude mcp list` to check status
+- Ensure you have Node.js 18+ installed for npx-based servers
+- For GitHub Docker option, ensure Docker is installed and running
 - Run /oh-my-claudecode:doctor to diagnose issues
 
-To add more MCP servers later, run: /oh-my-claudecode:mcp-setup
+MANAGING MCP SERVERS:
+- Add more servers: /oh-my-claudecode:mcp-setup or `claude mcp add ...`
+- List servers: `claude mcp list`
+- Remove a server: `claude mcp remove <server-name>`
 ```
 
 ## Custom MCP Server
@@ -175,23 +136,50 @@ If user selects "Custom":
 
 Ask for:
 1. Server name (identifier)
-2. Command to run (e.g., `npx`, `node`, path to executable)
-3. Arguments (comma-separated)
-4. Environment variables (optional, key=value pairs)
+2. Transport type: `stdio` (default) or `http`
+3. For stdio: Command and arguments (e.g., `npx my-mcp-server`)
+4. For http: URL (e.g., `https://example.com/mcp`)
+5. Environment variables (optional, key=value pairs)
+6. HTTP headers (optional, for http transport only)
 
-Then add to mcpServers section accordingly.
+Then construct and run the appropriate `claude mcp add` command:
+
+**For stdio servers:**
+```bash
+# Without environment variables
+claude mcp add <server-name> -- <command> [args...]
+
+# With environment variables
+claude mcp add -e KEY1=value1 -e KEY2=value2 <server-name> -- <command> [args...]
+```
+
+**For HTTP servers:**
+```bash
+# Basic HTTP server
+claude mcp add --transport http <server-name> <url>
+
+# HTTP server with headers
+claude mcp add --transport http --header "Authorization: Bearer <token>" <server-name> <url>
+```
 
 ## Common Issues
 
 ### MCP Server Not Loading
 - Ensure Node.js 18+ is installed
 - Check that npx is available in PATH
-- Verify no JSON syntax errors in settings.json
+- Run `claude mcp list` to verify server status
+- Check server logs for errors
 
 ### API Key Issues
 - Exa: Verify key at https://dashboard.exa.ai
-- GitHub: Ensure token has required scopes
+- GitHub: Ensure token has required scopes (repo, read:org)
+- Re-run `claude mcp add` with correct credentials if needed
 
 ### Agents Still Using Built-in Tools
 - Restart Claude Code after configuration
 - The built-in websearch will be deprioritized when exa is configured
+- Run `claude mcp list` to confirm servers are active
+
+### Removing or Updating a Server
+- Remove: `claude mcp remove <server-name>`
+- Update: Remove the old server, then add it again with new configuration

@@ -12,3 +12,15 @@ export * from './session-types.js';
 export * from './metrics-collector.js';
 export * from './query-engine.js';
 export * from './export.js';
+
+// Phase 2 modules (auto-tracking)
+export * from './token-extractor.js';
+export * from './output-estimator.js';
+export * from './analytics-summary.js';
+
+// Offline transcript analysis modules
+export * from './transcript-scanner.js';
+export * from './transcript-parser.js';
+export * from './transcript-token-extractor.js';
+export * from './backfill-dedup.js';
+export * from './backfill-engine.js';

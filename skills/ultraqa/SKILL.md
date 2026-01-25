@@ -107,7 +107,7 @@ Track state in `.omc/ultraqa-state.json`:
 
 ## Cancellation
 
-User can cancel with `/oh-my-claudecode:cancel-ultraqa` which clears the state file.
+User can cancel with `/oh-my-claudecode:cancel` which clears the state file.
 
 ## Important Rules
 

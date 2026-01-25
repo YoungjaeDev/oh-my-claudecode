@@ -21,14 +21,11 @@ export const SLASH_COMMAND_PATTERN = /^\/([a-zA-Z][\w-]*)\s*(.*)/;
  */
 export const EXCLUDED_COMMANDS = new Set([
   'ralph',
-  'cancel-ralph',
   'oh-my-claudecode:ralplan',
   'oh-my-claudecode:ultraqa',
   'oh-my-claudecode:learner',
   'oh-my-claudecode:plan',
-  'oh-my-claudecode:cancel-ralph',
-  'oh-my-claudecode:cancel-ultraqa',
-  'oh-my-claudecode:cancel-ultrawork',
+  'oh-my-claudecode:cancel',
   // Claude Code built-in commands that shouldn't be expanded
   'help',
   'clear',

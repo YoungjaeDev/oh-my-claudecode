@@ -257,7 +257,7 @@ CRITIC_FEEDBACK:
 
 To stop an active ralplan session:
 
-- Use `/oh-my-claudecode:cancel-ralph` (automatically detects ralplan via state file)
+- Use `/oh-my-claudecode:cancel` (automatically detects active mode)
 - Or manually delete `.omc/ralplan-state.json`
 
 ## Skill Workflow

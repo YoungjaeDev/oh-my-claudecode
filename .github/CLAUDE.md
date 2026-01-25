@@ -8,7 +8,7 @@ oh-my-claudecode is a Claude Code plugin that provides multi-agent orchestration
 
 ### Key Features
 - **32 specialized agents** with intelligent model routing (Haiku/Sonnet/Opus tiers)
-- **40 slash commands** including /oh-my-claudecode:ultrawork, /oh-my-claudecode:chillwork, /oh-my-claudecode:deepinit, /oh-my-claudecode:planner, /oh-my-claudecode:ralph
+- **35 slash commands** including /oh-my-claudecode:ultrawork, /oh-my-claudecode:deepinit, /oh-my-claudecode:ralph
 - **Smart delegation** - automatically routes tasks to appropriate specialist agents
 - **Background execution** - runs long-running tasks asynchronously
 - **Cost optimization** - chillwork mode prefers cheaper model tiers

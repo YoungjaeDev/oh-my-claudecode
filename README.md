@@ -135,6 +135,80 @@ Maximum parallelism with Haiku where possible, falling back to Sonnet/Opus for c
 
 ---
 
+## Auto Skill Learning (v3.5.0)
+
+OMC can automatically detect patterns in your problem-solving and suggest extracting them as reusable skills.
+
+### How It Works
+
+1. **Pattern Detection** - Recognizes problem-solution pairs in conversations
+2. **Skill Extraction** - `/oh-my-claudecode:learner` extracts reusable knowledge
+3. **Auto-Matching** - Fuzzy matching detects when skills apply to new problems
+4. **Auto-Invocation** - High-confidence matches (80+) auto-apply without prompting
+
+### Managing Local Skills
+
+```
+/oh-my-claudecode:skill list           # List all learned skills
+/oh-my-claudecode:skill search "auth"  # Find skills by keyword
+/oh-my-claudecode:skill edit <name>    # Edit a skill
+/oh-my-claudecode:skill sync           # Sync user + project skills
+```
+
+### Skill Storage
+
+- **User-level**: `~/.claude/skills/sisyphus-learned/` (shared across projects)
+- **Project-level**: `.omc/skills/` (project-specific)
+
+Skills use YAML frontmatter with triggers, tags, and quality scores.
+
+---
+
+## Analytics & Cost Tracking (v3.5.0)
+
+Track your Claude Code usage across all sessions with automatic transcript analysis.
+
+### Backfill Historical Data
+
+```
+omc backfill                    # Analyze all transcripts
+omc backfill --from 2026-01-01  # From specific date
+omc backfill --project "*/myproject/*"  # Filter by project
+```
+
+### View Statistics
+
+```
+omc stats                       # All sessions aggregate
+omc stats --session             # Current session only
+omc stats --json                # JSON output
+```
+
+**Sample Output:**
+```
+📊 All Sessions Stats
+Sessions: 18
+Entries: 3356
+
+💰 Token Usage & Cost
+Total Tokens: 4.36M
+Total Cost: $2620.49
+
+🤖 Top Agents by Cost (All Sessions)
+  (main session)              700.7k tokens  $1546.46
+  oh-my-claudecode:architect    1.18M tokens  $432.68
+  oh-my-claudecode:planner    540.9k tokens  $274.85
+  oh-my-claudecode:executor   306.9k tokens  $77.43
+```
+
+**Features:**
+- Automatic backfill on first `omc stats` run
+- Global storage in `~/.omc/state/` (cross-project)
+- Proper agent attribution (main session vs spawned agents)
+- Deduplication prevents double-counting
+
+---
+
 ## Data Analysis & Research (v3.4.0)
 
 ### Scientist Agent Tiers

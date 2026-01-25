@@ -63,8 +63,6 @@ rm -f "$CLAUDE_CONFIG_DIR/agents/prometheus.md"
 # Remove commands
 echo -e "${BLUE}Removing commands...${NC}"
 rm -f "$CLAUDE_CONFIG_DIR/commands/sisyphus.md"
-rm -f "$CLAUDE_CONFIG_DIR/commands/sisyphus-default.md"
-rm -f "$CLAUDE_CONFIG_DIR/commands/sisyphus-default-global.md"
 rm -f "$CLAUDE_CONFIG_DIR/commands/ultrawork.md"
 rm -f "$CLAUDE_CONFIG_DIR/commands/deepsearch.md"
 rm -f "$CLAUDE_CONFIG_DIR/commands/analyze.md"
@@ -72,8 +70,6 @@ rm -f "$CLAUDE_CONFIG_DIR/commands/plan.md"
 rm -f "$CLAUDE_CONFIG_DIR/commands/review.md"
 rm -f "$CLAUDE_CONFIG_DIR/commands/prometheus.md"
 rm -f "$CLAUDE_CONFIG_DIR/commands/orchestrator.md"
-rm -f "$CLAUDE_CONFIG_DIR/commands/ralph-loop.md"
-rm -f "$CLAUDE_CONFIG_DIR/commands/cancel-ralph.md"
 rm -f "$CLAUDE_CONFIG_DIR/commands/update.md"
 
 # Remove skills

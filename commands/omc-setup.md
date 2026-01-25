@@ -48,6 +48,40 @@ This will:
 2. Configure `statusLine` in `~/.claude/settings.json`
 3. Report status and prompt to restart if needed
 
+## Step 3.5: Verify Plugin Build
+
+The HUD requires the plugin to be built (dist/ directory). The dist/ folder is NOT included in git - it's generated when the plugin is installed via npm.
+
+Check if the plugin is installed and built:
+
+```bash
+# Find the installed plugin version
+PLUGIN_DIR="$HOME/.claude/plugins/cache/omc/oh-my-claudecode"
+if [ -d "$PLUGIN_DIR" ]; then
+  PLUGIN_VERSION=$(ls "$PLUGIN_DIR" 2>/dev/null | sort -V | tail -1)
+  if [ -n "$PLUGIN_VERSION" ]; then
+    # Check if dist/hud/index.js exists
+    if [ ! -f "$PLUGIN_DIR/$PLUGIN_VERSION/dist/hud/index.js" ]; then
+      echo "Plugin not built - building now..."
+      cd "$PLUGIN_DIR/$PLUGIN_VERSION" && npm install
+      if [ -f "dist/hud/index.js" ]; then
+        echo "Build successful - HUD is ready"
+      else
+        echo "Build failed - HUD may not work correctly"
+      fi
+    else
+      echo "Plugin already built - HUD is ready"
+    fi
+  else
+    echo "Plugin version not found"
+  fi
+else
+  echo "Plugin not installed - install with: claude /install-plugin oh-my-claudecode"
+fi
+```
+
+**Note:** The `npm install` command triggers the `prepare` script which runs `npm run build`, creating the dist/ directory with all compiled HUD files.
+
 ## Step 4: Verify Plugin Installation
 
 ```bash
@@ -119,14 +153,14 @@ That's it! Just use Claude Code normally.
 OMC Setup Complete! (Upgraded from 2.x)
 
 GOOD NEWS: Your existing commands still work!
-- /ralph, /ultrawork, /planner, etc. all still function
+- /ralph, /ultrawork, /plan, etc. all still function
 
 WHAT'S NEW in 3.0:
 You no longer NEED those commands. Everything is automatic now:
 - Just say "don't stop until done" instead of /ralph
 - Just say "fast" or "parallel" instead of /ultrawork
-- Just say "plan this" instead of /planner
-- Just say "stop" instead of /cancel-ralph
+- Just say "plan this" instead of /plan
+- Just say "stop" instead of /cancel
 
 MAGIC KEYWORDS (power-user shortcuts):
 | Keyword | Same as old... | Example |
@@ -134,7 +168,7 @@ MAGIC KEYWORDS (power-user shortcuts):
 | ralph | /ralph | "ralph: fix the bug" |
 | ralplan | /ralplan | "ralplan this feature" |
 | ulw | /ultrawork | "ulw refactor API" |
-| plan | /planner | "plan the endpoints" |
+| plan | /plan | "plan the endpoints" |
 
 HUD STATUSLINE:
 The status bar now shows OMC state. Restart Claude Code to see it.

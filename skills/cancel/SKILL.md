@@ -38,6 +38,8 @@ The skill checks state files to determine what's active:
 - `.omc/swarm-state.json` → Swarm detected
 - `.omc/ultrapilot-state.json` → Ultrapilot detected
 - `.omc/pipeline-state.json` → Pipeline detected
+- `.omc/state/plan-consensus.json` → Plan Consensus detected
+- `.omc/ralplan-state.json` → Plan Consensus detected (legacy)
 
 If multiple modes are active, they're cancelled in order of dependency:
 1. Autopilot (includes ralph/ultraqa/ecomode cleanup)
@@ -48,6 +50,7 @@ If multiple modes are active, they're cancelled in order of dependency:
 6. Swarm (standalone)
 7. Ultrapilot (standalone)
 8. Pipeline (standalone)
+9. Plan Consensus (standalone)
 
 ## Force Clear All
 
@@ -73,6 +76,8 @@ This removes all state files:
 - `.omc/state/swarm-tasks.json`
 - `.omc/ultrapilot-state.json`
 - `.omc/pipeline-state.json`
+- `.omc/state/plan-consensus.json`
+- `.omc/ralplan-state.json`
 - `~/.claude/ralph-state.json`
 - `~/.claude/ultrawork-state.json`
 - `~/.claude/ecomode-state.json`
@@ -120,6 +125,15 @@ fi
 if [[ -f .omc/ultraqa-state.json ]]; then
   ULTRAQA_ACTIVE=$(cat .omc/ultraqa-state.json | jq -r '.active // false')
 fi
+
+PLAN_CONSENSUS_ACTIVE=false
+
+# Check both new and legacy locations
+if [[ -f .omc/state/plan-consensus.json ]]; then
+  PLAN_CONSENSUS_ACTIVE=$(cat .omc/state/plan-consensus.json | jq -r '.active // false')
+elif [[ -f .omc/ralplan-state.json ]]; then
+  PLAN_CONSENSUS_ACTIVE=$(cat .omc/ralplan-state.json | jq -r '.active // false')
+fi
 ```
 
 ### 3A. Force Mode (if --force or --all)
@@ -140,6 +154,8 @@ if [[ "$FORCE_MODE" == "true" ]]; then
   rm -f .omc/state/swarm-tasks.json
   rm -f .omc/ultrapilot-state.json
   rm -f .omc/pipeline-state.json
+  rm -f .omc/state/plan-consensus.json
+  rm -f .omc/ralplan-state.json
 
   # Remove global state files
   rm -f ~/.claude/ralph-state.json
@@ -308,6 +324,8 @@ if [[ "$FORCE_MODE" == "true" ]]; then
   rm -f .omc/state/swarm-tasks.json
   rm -f .omc/ultrapilot-state.json
   rm -f .omc/pipeline-state.json
+  rm -f .omc/state/plan-consensus.json
+  rm -f .omc/ralplan-state.json
 
   # Remove global state files
   rm -f ~/.claude/ralph-state.json
@@ -526,6 +544,20 @@ if [[ -f .omc/pipeline-state.json ]]; then
   fi
 fi
 
+# 9. Check Plan Consensus (standalone)
+if [[ "$PLAN_CONSENSUS_ACTIVE" == "true" ]]; then
+  echo "Cancelling Plan Consensus mode..."
+
+  # Clear state files
+  rm -f .omc/state/plan-consensus.json
+  rm -f .omc/ralplan-state.json
+
+  echo "Plan Consensus cancelled. Planning session ended."
+  echo "Note: Plan file preserved at path specified in state."
+  CANCELLED_ANYTHING=true
+  exit 0
+fi
+
 # No active modes found
 if [[ "$CANCELLED_ANYTHING" == "false" ]]; then
   echo "No active OMC modes detected."
@@ -539,6 +571,7 @@ if [[ "$CANCELLED_ANYTHING" == "false" ]]; then
   echo "  - Swarm (.omc/swarm-state.json)"
   echo "  - Ultrapilot (.omc/ultrapilot-state.json)"
   echo "  - Pipeline (.omc/pipeline-state.json)"
+  echo "  - Plan Consensus (.omc/state/plan-consensus.json)"
   echo ""
   echo "Use --force to clear all state files anyway."
 fi
@@ -556,6 +589,7 @@ fi
 | Swarm | "Swarm cancelled. Coordinated agents stopped." |
 | Ultrapilot | "Ultrapilot cancelled. Parallel autopilot workers stopped." |
 | Pipeline | "Pipeline cancelled. Sequential agent chain stopped." |
+| Plan Consensus | "Plan Consensus cancelled. Planning session ended." |
 | Force | "All OMC modes cleared. You are free to start fresh." |
 | None | "No active OMC modes detected." |
 
@@ -570,6 +604,7 @@ fi
 | Swarm | No | N/A |
 | Ultrapilot | No | N/A |
 | Pipeline | No | N/A |
+| Plan Consensus | Yes (plan file path preserved) | N/A |
 
 ## Notes
 
