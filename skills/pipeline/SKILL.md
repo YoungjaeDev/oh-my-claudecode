@@ -145,6 +145,33 @@ parallel(explore, researcher) -> architect -> executor
 
 ---
 
+### Council Pipeline
+**Purpose:** Multi-model deliberation for critical architectural decisions
+
+```
+/pipeline council <question>
+```
+
+**Stages:**
+1. `parallel(opus, sonnet, codex-agent, gemini-agent)` - Gather opinions from 4 models
+2. `analyst` - Detect gaps and conflicts in responses
+3. `architect` - Synthesize consensus and form final verdict
+4. `executor` (optional) - Implement the decided approach
+
+**Use for:** Major architectural decisions, technology choices, design debates
+
+**Options:**
+- `--quick`: Single-round quick consensus (skips Round 2-3)
+- `--implement`: Auto-continue to executor stage after consensus
+
+**Example:**
+```
+/pipeline council "Should we use GraphQL or REST for the new API?"
+/pipeline council --implement "How should we structure the auth module?"
+```
+
+---
+
 ## Custom Pipeline Syntax
 
 ### Basic Sequential
