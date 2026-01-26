@@ -314,6 +314,14 @@ export function install(options: InstallOptions = {}): InstallResult {
 
       if (!existsSync(homeMdPath)) {
         if (!existsSync(claudeMdPath) || options.force) {
+          // Backup existing CLAUDE.md before overwriting (if it exists and --force)
+          if (existsSync(claudeMdPath) && options.force) {
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const backupPath = join(CLAUDE_CONFIG_DIR, `CLAUDE.md.backup.${today}`);
+            const existingContent = readFileSync(claudeMdPath, 'utf-8');
+            writeFileSync(backupPath, existingContent);
+            log(`Backed up existing CLAUDE.md to ${backupPath}`);
+          }
           writeFileSync(claudeMdPath, loadClaudeMdContent());
           log('Created CLAUDE.md');
         } else {
