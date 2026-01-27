@@ -30,16 +30,16 @@ Or say: "stop", "cancel", "abort"
 ## Auto-Detection
 
 The skill checks state files to determine what's active:
-- `.omc/autopilot-state.json` → Autopilot detected
-- `.omc/ralph-state.json` → Ralph detected
-- `.omc/ultrawork-state.json` → Ultrawork detected
-- `.omc/ecomode-state.json` → Ecomode detected
-- `.omc/ultraqa-state.json` → UltraQA detected
-- `.omc/swarm-state.json` → Swarm detected
-- `.omc/ultrapilot-state.json` → Ultrapilot detected
-- `.omc/pipeline-state.json` → Pipeline detected
+- `.omc/state/autopilot-state.json` → Autopilot detected
+- `.omc/state/ralph-state.json` → Ralph detected
+- `.omc/state/ultrawork-state.json` → Ultrawork detected
+- `.omc/state/ecomode-state.json` → Ecomode detected
+- `.omc/state/ultraqa-state.json` → UltraQA detected
+- `.omc/state/swarm.db` → Swarm detected (SQLite database)
+- `.omc/state/ultrapilot-state.json` → Ultrapilot detected
+- `.omc/state/pipeline-state.json` → Pipeline detected
 - `.omc/state/plan-consensus.json` → Plan Consensus detected
-- `.omc/ralplan-state.json` → Plan Consensus detected (legacy)
+- `.omc/state/ralplan-state.json` → Plan Consensus detected (legacy)
 
 If multiple modes are active, they're cancelled in order of dependency:
 1. Autopilot (includes ralph/ultraqa/ecomode cleanup)
@@ -67,17 +67,19 @@ Or use the `--all` alias:
 ```
 
 This removes all state files:
-- `.omc/autopilot-state.json`
-- `.omc/ralph-state.json`
-- `.omc/ultrawork-state.json`
-- `.omc/ecomode-state.json`
-- `.omc/ultraqa-state.json`
-- `.omc/swarm-state.json`
-- `.omc/state/swarm-tasks.json`
-- `.omc/ultrapilot-state.json`
-- `.omc/pipeline-state.json`
+- `.omc/state/autopilot-state.json`
+- `.omc/state/ralph-state.json`
+- `.omc/state/ultrawork-state.json`
+- `.omc/state/ecomode-state.json`
+- `.omc/state/ultraqa-state.json`
+- `.omc/state/swarm.db`
+- `.omc/state/swarm.db-wal`
+- `.omc/state/swarm.db-shm`
+- `.omc/state/swarm-active.marker`
+- `.omc/state/ultrapilot-state.json`
+- `.omc/state/pipeline-state.json`
 - `.omc/state/plan-consensus.json`
-- `.omc/ralplan-state.json`
+- `.omc/state/ralplan-state.json`
 - `~/.claude/ralph-state.json`
 - `~/.claude/ultrawork-state.json`
 - `~/.claude/ecomode-state.json`
@@ -106,24 +108,24 @@ ULTRAWORK_ACTIVE=false
 ECOMODE_ACTIVE=false
 ULTRAQA_ACTIVE=false
 
-if [[ -f .omc/autopilot-state.json ]]; then
-  AUTOPILOT_ACTIVE=$(cat .omc/autopilot-state.json | jq -r '.active // false')
+if [[ -f .omc/state/autopilot-state.json ]]; then
+  AUTOPILOT_ACTIVE=$(cat .omc/state/autopilot-state.json | jq -r '.active // false')
 fi
 
-if [[ -f .omc/ralph-state.json ]]; then
-  RALPH_ACTIVE=$(cat .omc/ralph-state.json | jq -r '.active // false')
+if [[ -f .omc/state/ralph-state.json ]]; then
+  RALPH_ACTIVE=$(cat .omc/state/ralph-state.json | jq -r '.active // false')
 fi
 
-if [[ -f .omc/ultrawork-state.json ]]; then
-  ULTRAWORK_ACTIVE=$(cat .omc/ultrawork-state.json | jq -r '.active // false')
+if [[ -f .omc/state/ultrawork-state.json ]]; then
+  ULTRAWORK_ACTIVE=$(cat .omc/state/ultrawork-state.json | jq -r '.active // false')
 fi
 
-if [[ -f .omc/ecomode-state.json ]]; then
-  ECOMODE_ACTIVE=$(cat .omc/ecomode-state.json | jq -r '.active // false')
+if [[ -f .omc/state/ecomode-state.json ]]; then
+  ECOMODE_ACTIVE=$(cat .omc/state/ecomode-state.json | jq -r '.active // false')
 fi
 
-if [[ -f .omc/ultraqa-state.json ]]; then
-  ULTRAQA_ACTIVE=$(cat .omc/ultraqa-state.json | jq -r '.active // false')
+if [[ -f .omc/state/ultraqa-state.json ]]; then
+  ULTRAQA_ACTIVE=$(cat .omc/state/ultraqa-state.json | jq -r '.active // false')
 fi
 
 PLAN_CONSENSUS_ACTIVE=false
@@ -131,8 +133,8 @@ PLAN_CONSENSUS_ACTIVE=false
 # Check both new and legacy locations
 if [[ -f .omc/state/plan-consensus.json ]]; then
   PLAN_CONSENSUS_ACTIVE=$(cat .omc/state/plan-consensus.json | jq -r '.active // false')
-elif [[ -f .omc/ralplan-state.json ]]; then
-  PLAN_CONSENSUS_ACTIVE=$(cat .omc/ralplan-state.json | jq -r '.active // false')
+elif [[ -f .omc/state/ralplan-state.json ]]; then
+  PLAN_CONSENSUS_ACTIVE=$(cat .omc/state/ralplan-state.json | jq -r '.active // false')
 fi
 ```
 
@@ -143,19 +145,21 @@ if [[ "$FORCE_MODE" == "true" ]]; then
   echo "FORCE CLEAR: Removing all OMC state files..."
 
   # Remove local state files
-  rm -f .omc/autopilot-state.json
-  rm -f .omc/ralph-state.json
-  rm -f .omc/ultrawork-state.json
-  rm -f .omc/ecomode-state.json
-  rm -f .omc/ultraqa-state.json
-  rm -f .omc/ralph-plan-state.json
-  rm -f .omc/ralph-verification.json
-  rm -f .omc/swarm-state.json
-  rm -f .omc/state/swarm-tasks.json
-  rm -f .omc/ultrapilot-state.json
-  rm -f .omc/pipeline-state.json
+  rm -f .omc/state/autopilot-state.json
+  rm -f .omc/state/ralph-state.json
+  rm -f .omc/state/ultrawork-state.json
+  rm -f .omc/state/ecomode-state.json
+  rm -f .omc/state/ultraqa-state.json
+  rm -f .omc/state/ralph-plan-state.json
+  rm -f .omc/state/ralph-verification.json
+  rm -f .omc/state/swarm.db
+  rm -f .omc/state/swarm.db-wal
+  rm -f .omc/state/swarm.db-shm
+  rm -f .omc/state/swarm-active.marker
+  rm -f .omc/state/ultrapilot-state.json
+  rm -f .omc/state/pipeline-state.json
   rm -f .omc/state/plan-consensus.json
-  rm -f .omc/ralplan-state.json
+  rm -f .omc/state/ralplan-state.json
 
   # Remove global state files
   rm -f ~/.claude/ralph-state.json
@@ -176,36 +180,36 @@ Call `cancelAutopilot()` from `src/hooks/autopilot/cancel.ts:27-78`:
 ```bash
 # Autopilot handles its own cleanup + ralph + ultraqa
 # Just mark autopilot as inactive (preserves state for resume)
-if [[ -f .omc/autopilot-state.json ]]; then
+if [[ -f .omc/state/autopilot-state.json ]]; then
   # Clean up ralph if active
-  if [[ -f .omc/ralph-state.json ]]; then
-    RALPH_STATE=$(cat .omc/ralph-state.json)
+  if [[ -f .omc/state/ralph-state.json ]]; then
+    RALPH_STATE=$(cat .omc/state/ralph-state.json)
     LINKED_UW=$(echo "$RALPH_STATE" | jq -r '.linked_ultrawork // false')
 
     # Clean linked ultrawork first
-    if [[ "$LINKED_UW" == "true" ]] && [[ -f .omc/ultrawork-state.json ]]; then
-      rm -f .omc/ultrawork-state.json
+    if [[ "$LINKED_UW" == "true" ]] && [[ -f .omc/state/ultrawork-state.json ]]; then
+      rm -f .omc/state/ultrawork-state.json
       rm -f ~/.claude/ultrawork-state.json
       echo "Cleaned up: ultrawork (linked to ralph)"
     fi
 
     # Clean ralph
-    rm -f .omc/ralph-state.json
+    rm -f .omc/state/ralph-state.json
     rm -f ~/.claude/ralph-state.json
-    rm -f .omc/ralph-verification.json
+    rm -f .omc/state/ralph-verification.json
     echo "Cleaned up: ralph"
   fi
 
   # Clean up ultraqa if active
-  if [[ -f .omc/ultraqa-state.json ]]; then
-    rm -f .omc/ultraqa-state.json
+  if [[ -f .omc/state/ultraqa-state.json ]]; then
+    rm -f .omc/state/ultraqa-state.json
     echo "Cleaned up: ultraqa"
   fi
 
   # Mark autopilot inactive but preserve state
-  CURRENT_STATE=$(cat .omc/autopilot-state.json)
+  CURRENT_STATE=$(cat .omc/state/autopilot-state.json)
   CURRENT_PHASE=$(echo "$CURRENT_STATE" | jq -r '.phase // "unknown"')
-  echo "$CURRENT_STATE" | jq '.active = false' > .omc/autopilot-state.json
+  echo "$CURRENT_STATE" | jq '.active = false' > .omc/state/autopilot-state.json
 
   echo "Autopilot cancelled at phase: $CURRENT_PHASE. Progress preserved for resume."
   echo "Run /oh-my-claudecode:autopilot to resume."
@@ -217,29 +221,29 @@ fi
 Call `clearRalphState()` + `clearLinkedUltraworkState()` from `src/hooks/ralph-loop/index.ts:147-182`:
 
 ```bash
-if [[ -f .omc/ralph-state.json ]]; then
+if [[ -f .omc/state/ralph-state.json ]]; then
   # Check if ultrawork is linked
-  RALPH_STATE=$(cat .omc/ralph-state.json)
+  RALPH_STATE=$(cat .omc/state/ralph-state.json)
   LINKED_UW=$(echo "$RALPH_STATE" | jq -r '.linked_ultrawork // false')
 
   # Clean linked ultrawork first
-  if [[ "$LINKED_UW" == "true" ]] && [[ -f .omc/ultrawork-state.json ]]; then
-    UW_STATE=$(cat .omc/ultrawork-state.json)
+  if [[ "$LINKED_UW" == "true" ]] && [[ -f .omc/state/ultrawork-state.json ]]; then
+    UW_STATE=$(cat .omc/state/ultrawork-state.json)
     UW_LINKED=$(echo "$UW_STATE" | jq -r '.linked_to_ralph // false')
 
     # Only clear if it was linked to ralph
     if [[ "$UW_LINKED" == "true" ]]; then
-      rm -f .omc/ultrawork-state.json
+      rm -f .omc/state/ultrawork-state.json
       rm -f ~/.claude/ultrawork-state.json
       echo "Cleaned up: ultrawork (linked to ralph)"
     fi
   fi
 
   # Clean ralph state (both local and global)
-  rm -f .omc/ralph-state.json
+  rm -f .omc/state/ralph-state.json
   rm -f ~/.claude/ralph-state.json
-  rm -f .omc/ralph-plan-state.json
-  rm -f .omc/ralph-verification.json
+  rm -f .omc/state/ralph-plan-state.json
+  rm -f .omc/state/ralph-verification.json
 
   echo "Ralph cancelled. Persistent mode deactivated."
 fi
@@ -250,9 +254,9 @@ fi
 Call `deactivateUltrawork()` from `src/hooks/ultrawork/index.ts:150-173`:
 
 ```bash
-if [[ -f .omc/ultrawork-state.json ]]; then
+if [[ -f .omc/state/ultrawork-state.json ]]; then
   # Check if linked to ralph
-  UW_STATE=$(cat .omc/ultrawork-state.json)
+  UW_STATE=$(cat .omc/state/ultrawork-state.json)
   LINKED=$(echo "$UW_STATE" | jq -r '.linked_to_ralph // false')
 
   if [[ "$LINKED" == "true" ]]; then
@@ -261,7 +265,7 @@ if [[ -f .omc/ultrawork-state.json ]]; then
   fi
 
   # Remove both local and global state
-  rm -f .omc/ultrawork-state.json
+  rm -f .omc/state/ultrawork-state.json
   rm -f ~/.claude/ultrawork-state.json
 
   echo "Ultrawork cancelled. Parallel execution mode deactivated."
@@ -273,8 +277,8 @@ fi
 Call `clearUltraQAState()` from `src/hooks/ultraqa/index.ts:107-120`:
 
 ```bash
-if [[ -f .omc/ultraqa-state.json ]]; then
-  rm -f .omc/ultraqa-state.json
+if [[ -f .omc/state/ultraqa-state.json ]]; then
+  rm -f .omc/state/ultraqa-state.json
   echo "UltraQA cancelled. QA cycling workflow stopped."
 fi
 ```
@@ -285,10 +289,10 @@ fi
 echo "No active OMC modes detected."
 echo ""
 echo "Checked for:"
-echo "  - Autopilot (.omc/autopilot-state.json)"
-echo "  - Ralph (.omc/ralph-state.json)"
-echo "  - Ultrawork (.omc/ultrawork-state.json)"
-echo "  - UltraQA (.omc/ultraqa-state.json)"
+echo "  - Autopilot (.omc/state/autopilot-state.json)"
+echo "  - Ralph (.omc/state/ralph-state.json)"
+echo "  - Ultrawork (.omc/state/ultrawork-state.json)"
+echo "  - UltraQA (.omc/state/ultraqa-state.json)"
 echo ""
 echo "Use --force to clear all state files anyway."
 ```
@@ -313,19 +317,21 @@ if [[ "$FORCE_MODE" == "true" ]]; then
   mkdir -p .omc ~/.claude
 
   # Remove local state files
-  rm -f .omc/autopilot-state.json
-  rm -f .omc/ralph-state.json
-  rm -f .omc/ultrawork-state.json
-  rm -f .omc/ecomode-state.json
-  rm -f .omc/ultraqa-state.json
-  rm -f .omc/ralph-plan-state.json
-  rm -f .omc/ralph-verification.json
-  rm -f .omc/swarm-state.json
-  rm -f .omc/state/swarm-tasks.json
-  rm -f .omc/ultrapilot-state.json
-  rm -f .omc/pipeline-state.json
+  rm -f .omc/state/autopilot-state.json
+  rm -f .omc/state/ralph-state.json
+  rm -f .omc/state/ultrawork-state.json
+  rm -f .omc/state/ecomode-state.json
+  rm -f .omc/state/ultraqa-state.json
+  rm -f .omc/state/ralph-plan-state.json
+  rm -f .omc/state/ralph-verification.json
+  rm -f .omc/state/swarm.db
+  rm -f .omc/state/swarm.db-wal
+  rm -f .omc/state/swarm.db-shm
+  rm -f .omc/state/swarm-active.marker
+  rm -f .omc/state/ultrapilot-state.json
+  rm -f .omc/state/pipeline-state.json
   rm -f .omc/state/plan-consensus.json
-  rm -f .omc/ralplan-state.json
+  rm -f .omc/state/ralplan-state.json
 
   # Remove global state files
   rm -f ~/.claude/ralph-state.json
@@ -341,8 +347,8 @@ fi
 CANCELLED_ANYTHING=false
 
 # 1. Check Autopilot (highest priority, includes cleanup of ralph/ultraqa)
-if [[ -f .omc/autopilot-state.json ]]; then
-  AUTOPILOT_STATE=$(cat .omc/autopilot-state.json)
+if [[ -f .omc/state/autopilot-state.json ]]; then
+  AUTOPILOT_STATE=$(cat .omc/state/autopilot-state.json)
   AUTOPILOT_ACTIVE=$(echo "$AUTOPILOT_STATE" | jq -r '.active // false')
 
   if [[ "$AUTOPILOT_ACTIVE" == "true" ]]; then
@@ -350,41 +356,41 @@ if [[ -f .omc/autopilot-state.json ]]; then
     CLEANED_UP=()
 
     # Clean up ralph if active
-    if [[ -f .omc/ralph-state.json ]]; then
-      RALPH_STATE=$(cat .omc/ralph-state.json)
+    if [[ -f .omc/state/ralph-state.json ]]; then
+      RALPH_STATE=$(cat .omc/state/ralph-state.json)
       RALPH_ACTIVE=$(echo "$RALPH_STATE" | jq -r '.active // false')
 
       if [[ "$RALPH_ACTIVE" == "true" ]]; then
         LINKED_UW=$(echo "$RALPH_STATE" | jq -r '.linked_ultrawork // false')
 
         # Clean linked ultrawork first
-        if [[ "$LINKED_UW" == "true" ]] && [[ -f .omc/ultrawork-state.json ]]; then
-          rm -f .omc/ultrawork-state.json
+        if [[ "$LINKED_UW" == "true" ]] && [[ -f .omc/state/ultrawork-state.json ]]; then
+          rm -f .omc/state/ultrawork-state.json
           rm -f ~/.claude/ultrawork-state.json
           CLEANED_UP+=("ultrawork")
         fi
 
         # Clean ralph
-        rm -f .omc/ralph-state.json
+        rm -f .omc/state/ralph-state.json
         rm -f ~/.claude/ralph-state.json
-        rm -f .omc/ralph-verification.json
+        rm -f .omc/state/ralph-verification.json
         CLEANED_UP+=("ralph")
       fi
     fi
 
     # Clean up ultraqa if active
-    if [[ -f .omc/ultraqa-state.json ]]; then
-      ULTRAQA_STATE=$(cat .omc/ultraqa-state.json)
+    if [[ -f .omc/state/ultraqa-state.json ]]; then
+      ULTRAQA_STATE=$(cat .omc/state/ultraqa-state.json)
       ULTRAQA_ACTIVE=$(echo "$ULTRAQA_STATE" | jq -r '.active // false')
 
       if [[ "$ULTRAQA_ACTIVE" == "true" ]]; then
-        rm -f .omc/ultraqa-state.json
+        rm -f .omc/state/ultraqa-state.json
         CLEANED_UP+=("ultraqa")
       fi
     fi
 
     # Mark autopilot inactive but preserve state for resume
-    echo "$AUTOPILOT_STATE" | jq '.active = false' > .omc/autopilot-state.json
+    echo "$AUTOPILOT_STATE" | jq '.active = false' > .omc/state/autopilot-state.json
 
     echo "Autopilot cancelled at phase: $CURRENT_PHASE."
 
@@ -399,21 +405,21 @@ if [[ -f .omc/autopilot-state.json ]]; then
 fi
 
 # 2. Check Ralph (if not handled by autopilot)
-if [[ -f .omc/ralph-state.json ]]; then
-  RALPH_STATE=$(cat .omc/ralph-state.json)
+if [[ -f .omc/state/ralph-state.json ]]; then
+  RALPH_STATE=$(cat .omc/state/ralph-state.json)
   RALPH_ACTIVE=$(echo "$RALPH_STATE" | jq -r '.active // false')
 
   if [[ "$RALPH_ACTIVE" == "true" ]]; then
     LINKED_UW=$(echo "$RALPH_STATE" | jq -r '.linked_ultrawork // false')
 
     # Clean linked ultrawork first
-    if [[ "$LINKED_UW" == "true" ]] && [[ -f .omc/ultrawork-state.json ]]; then
-      UW_STATE=$(cat .omc/ultrawork-state.json)
+    if [[ "$LINKED_UW" == "true" ]] && [[ -f .omc/state/ultrawork-state.json ]]; then
+      UW_STATE=$(cat .omc/state/ultrawork-state.json)
       UW_LINKED=$(echo "$UW_STATE" | jq -r '.linked_to_ralph // false')
 
       # Only clear if it was linked to ralph
       if [[ "$UW_LINKED" == "true" ]]; then
-        rm -f .omc/ultrawork-state.json
+        rm -f .omc/state/ultrawork-state.json
         rm -f ~/.claude/ultrawork-state.json
         echo "Cleaned up: ultrawork (linked to ralph)"
       fi
@@ -422,22 +428,22 @@ if [[ -f .omc/ralph-state.json ]]; then
     # Clean linked ecomode if present
     LINKED_ECO=$(echo "$RALPH_STATE" | jq -r '.linked_ecomode // false')
 
-    if [[ "$LINKED_ECO" == "true" ]] && [[ -f .omc/ecomode-state.json ]]; then
-      ECO_STATE=$(cat .omc/ecomode-state.json)
+    if [[ "$LINKED_ECO" == "true" ]] && [[ -f .omc/state/ecomode-state.json ]]; then
+      ECO_STATE=$(cat .omc/state/ecomode-state.json)
       ECO_LINKED=$(echo "$ECO_STATE" | jq -r '.linked_to_ralph // false')
 
       if [[ "$ECO_LINKED" == "true" ]]; then
-        rm -f .omc/ecomode-state.json
+        rm -f .omc/state/ecomode-state.json
         rm -f ~/.claude/ecomode-state.json
         echo "Cleaned up: ecomode (linked to ralph)"
       fi
     fi
 
     # Clean ralph state (both local and global)
-    rm -f .omc/ralph-state.json
+    rm -f .omc/state/ralph-state.json
     rm -f ~/.claude/ralph-state.json
-    rm -f .omc/ralph-plan-state.json
-    rm -f .omc/ralph-verification.json
+    rm -f .omc/state/ralph-plan-state.json
+    rm -f .omc/state/ralph-verification.json
 
     echo "Ralph cancelled. Persistent mode deactivated."
     CANCELLED_ANYTHING=true
@@ -446,8 +452,8 @@ if [[ -f .omc/ralph-state.json ]]; then
 fi
 
 # 3. Check Ultrawork (standalone, not linked)
-if [[ -f .omc/ultrawork-state.json ]]; then
-  UW_STATE=$(cat .omc/ultrawork-state.json)
+if [[ -f .omc/state/ultrawork-state.json ]]; then
+  UW_STATE=$(cat .omc/state/ultrawork-state.json)
   UW_ACTIVE=$(echo "$UW_STATE" | jq -r '.active // false')
 
   if [[ "$UW_ACTIVE" == "true" ]]; then
@@ -459,7 +465,7 @@ if [[ -f .omc/ultrawork-state.json ]]; then
     fi
 
     # Remove both local and global state
-    rm -f .omc/ultrawork-state.json
+    rm -f .omc/state/ultrawork-state.json
     rm -f ~/.claude/ultrawork-state.json
 
     echo "Ultrawork cancelled. Parallel execution mode deactivated."
@@ -469,8 +475,8 @@ if [[ -f .omc/ultrawork-state.json ]]; then
 fi
 
 # 4. Check Ecomode (standalone, not linked)
-if [[ -f .omc/ecomode-state.json ]]; then
-  ECO_STATE=$(cat .omc/ecomode-state.json)
+if [[ -f .omc/state/ecomode-state.json ]]; then
+  ECO_STATE=$(cat .omc/state/ecomode-state.json)
   ECO_ACTIVE=$(echo "$ECO_STATE" | jq -r '.active // false')
 
   if [[ "$ECO_ACTIVE" == "true" ]]; then
@@ -482,7 +488,7 @@ if [[ -f .omc/ecomode-state.json ]]; then
     fi
 
     # Remove both local and global state
-    rm -f .omc/ecomode-state.json
+    rm -f .omc/state/ecomode-state.json
     rm -f ~/.claude/ecomode-state.json
 
     echo "Ecomode cancelled. Token-efficient execution mode deactivated."
@@ -492,39 +498,58 @@ if [[ -f .omc/ecomode-state.json ]]; then
 fi
 
 # 5. Check UltraQA (standalone)
-if [[ -f .omc/ultraqa-state.json ]]; then
-  ULTRAQA_STATE=$(cat .omc/ultraqa-state.json)
+if [[ -f .omc/state/ultraqa-state.json ]]; then
+  ULTRAQA_STATE=$(cat .omc/state/ultraqa-state.json)
   ULTRAQA_ACTIVE=$(echo "$ULTRAQA_STATE" | jq -r '.active // false')
 
   if [[ "$ULTRAQA_ACTIVE" == "true" ]]; then
-    rm -f .omc/ultraqa-state.json
+    rm -f .omc/state/ultraqa-state.json
     echo "UltraQA cancelled. QA cycling workflow stopped."
     CANCELLED_ANYTHING=true
     exit 0
   fi
 fi
 
-# 6. Check Swarm (standalone)
-if [[ -f .omc/swarm-state.json ]]; then
-  SWARM_STATE=$(cat .omc/swarm-state.json)
-  SWARM_ACTIVE=$(echo "$SWARM_STATE" | jq -r '.active // false')
+# 6. Check Swarm (SQLite-based)
+SWARM_DB=".omc/state/swarm.db"
+if [[ -f "$SWARM_DB" ]]; then
+  # Check if sqlite3 CLI is available
+  if command -v sqlite3 &>/dev/null; then
+    # Query SQLite to check if swarm is active
+    SWARM_ACTIVE=$(sqlite3 "$SWARM_DB" "SELECT active FROM swarm_session WHERE id = 1;" 2>/dev/null || echo "0")
 
-  if [[ "$SWARM_ACTIVE" == "true" ]]; then
-    rm -f .omc/swarm-state.json
-    rm -f .omc/state/swarm-tasks.json
-    echo "Swarm cancelled. Coordinated agents stopped."
-    CANCELLED_ANYTHING=true
-    exit 0
+    if [[ "$SWARM_ACTIVE" == "1" ]]; then
+      # Get stats before cancelling
+      DONE_TASKS=$(sqlite3 "$SWARM_DB" "SELECT COUNT(*) FROM tasks WHERE status = 'done';" 2>/dev/null || echo "0")
+      TOTAL_TASKS=$(sqlite3 "$SWARM_DB" "SELECT COUNT(*) FROM tasks;" 2>/dev/null || echo "0")
+
+      # Mark swarm as inactive
+      sqlite3 "$SWARM_DB" "UPDATE swarm_session SET active = 0, completed_at = $(date +%s000) WHERE id = 1;"
+
+      echo "Swarm cancelled. $DONE_TASKS/$TOTAL_TASKS tasks completed."
+      echo "Database preserved at $SWARM_DB for analysis."
+      CANCELLED_ANYTHING=true
+      exit 0
+    fi
+  else
+    # Fallback: Check marker file if sqlite3 is not available
+    MARKER_FILE=".omc/state/swarm-active.marker"
+    if [[ -f "$MARKER_FILE" ]]; then
+      rm -f "$MARKER_FILE"
+      echo "Swarm cancelled (marker file removed). Database at $SWARM_DB may need manual cleanup."
+      CANCELLED_ANYTHING=true
+      exit 0
+    fi
   fi
 fi
 
 # 7. Check Ultrapilot (standalone)
-if [[ -f .omc/ultrapilot-state.json ]]; then
-  ULTRAPILOT_STATE=$(cat .omc/ultrapilot-state.json)
+if [[ -f .omc/state/ultrapilot-state.json ]]; then
+  ULTRAPILOT_STATE=$(cat .omc/state/ultrapilot-state.json)
   ULTRAPILOT_ACTIVE=$(echo "$ULTRAPILOT_STATE" | jq -r '.active // false')
 
   if [[ "$ULTRAPILOT_ACTIVE" == "true" ]]; then
-    rm -f .omc/ultrapilot-state.json
+    rm -f .omc/state/ultrapilot-state.json
     echo "Ultrapilot cancelled. Parallel autopilot workers stopped."
     CANCELLED_ANYTHING=true
     exit 0
@@ -532,12 +557,12 @@ if [[ -f .omc/ultrapilot-state.json ]]; then
 fi
 
 # 8. Check Pipeline (standalone)
-if [[ -f .omc/pipeline-state.json ]]; then
-  PIPELINE_STATE=$(cat .omc/pipeline-state.json)
+if [[ -f .omc/state/pipeline-state.json ]]; then
+  PIPELINE_STATE=$(cat .omc/state/pipeline-state.json)
   PIPELINE_ACTIVE=$(echo "$PIPELINE_STATE" | jq -r '.active // false')
 
   if [[ "$PIPELINE_ACTIVE" == "true" ]]; then
-    rm -f .omc/pipeline-state.json
+    rm -f .omc/state/pipeline-state.json
     echo "Pipeline cancelled. Sequential agent chain stopped."
     CANCELLED_ANYTHING=true
     exit 0
@@ -550,7 +575,7 @@ if [[ "$PLAN_CONSENSUS_ACTIVE" == "true" ]]; then
 
   # Clear state files
   rm -f .omc/state/plan-consensus.json
-  rm -f .omc/ralplan-state.json
+  rm -f .omc/state/ralplan-state.json
 
   echo "Plan Consensus cancelled. Planning session ended."
   echo "Note: Plan file preserved at path specified in state."
@@ -563,14 +588,14 @@ if [[ "$CANCELLED_ANYTHING" == "false" ]]; then
   echo "No active OMC modes detected."
   echo ""
   echo "Checked for:"
-  echo "  - Autopilot (.omc/autopilot-state.json)"
-  echo "  - Ralph (.omc/ralph-state.json)"
-  echo "  - Ultrawork (.omc/ultrawork-state.json)"
-  echo "  - Ecomode (.omc/ecomode-state.json)"
-  echo "  - UltraQA (.omc/ultraqa-state.json)"
-  echo "  - Swarm (.omc/swarm-state.json)"
-  echo "  - Ultrapilot (.omc/ultrapilot-state.json)"
-  echo "  - Pipeline (.omc/pipeline-state.json)"
+  echo "  - Autopilot (.omc/state/autopilot-state.json)"
+  echo "  - Ralph (.omc/state/ralph-state.json)"
+  echo "  - Ultrawork (.omc/state/ultrawork-state.json)"
+  echo "  - Ecomode (.omc/state/ecomode-state.json)"
+  echo "  - UltraQA (.omc/state/ultraqa-state.json)"
+  echo "  - Swarm (.omc/state/swarm.db)"
+  echo "  - Ultrapilot (.omc/state/ultrapilot-state.json)"
+  echo "  - Pipeline (.omc/state/pipeline-state.json)"
   echo "  - Plan Consensus (.omc/state/plan-consensus.json)"
   echo ""
   echo "Use --force to clear all state files anyway."

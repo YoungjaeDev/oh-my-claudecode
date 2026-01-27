@@ -149,14 +149,19 @@ export interface PrdStateForHud {
 // ============================================================================
 
 export interface RateLimits {
-  /** 5-hour rolling window usage percentage (0-100) */
+  /** 5-hour rolling window usage percentage (0-100) - all models combined */
   fiveHourPercent: number;
-  /** Weekly usage percentage (0-100) */
+  /** Weekly usage percentage (0-100) - all models combined */
   weeklyPercent: number;
   /** When the 5-hour limit resets (null if unavailable) */
   fiveHourResetsAt?: Date | null;
   /** When the weekly limit resets (null if unavailable) */
   weeklyResetsAt?: Date | null;
+
+  /** Sonnet-specific weekly usage percentage (0-100), if available from API */
+  sonnetWeeklyPercent?: number;
+  /** Sonnet weekly reset time */
+  sonnetWeeklyResetsAt?: Date | null;
 }
 
 export interface HudRenderContext {
@@ -242,6 +247,8 @@ export interface HudElementConfig {
   thinking: boolean;          // Show extended thinking indicator
   sessionHealth: boolean;     // Show session health/duration
   useBars: boolean;           // Show visual progress bars instead of/alongside percentages
+  showCache: boolean;         // Show cache hit rate in analytics displays
+  showCost: boolean;          // Show cost/dollar amounts in analytics displays
 }
 
 export interface HudThresholds {
@@ -282,6 +289,8 @@ export const DEFAULT_HUD_CONFIG: HudConfig = {
     thinking: true,
     sessionHealth: true,
     useBars: false,  // Disabled by default for backwards compatibility
+    showCache: true,
+    showCost: true,
   },
   thresholds: {
     contextWarning: 70,
@@ -310,6 +319,8 @@ export const PRESET_CONFIGS: Record<HudPreset, Partial<HudElementConfig>> = {
     thinking: false,
     sessionHealth: false,
     useBars: false,
+    showCache: false,
+    showCost: false,
   },
   analytics: {
     omcLabel: false,
@@ -329,6 +340,8 @@ export const PRESET_CONFIGS: Record<HudPreset, Partial<HudElementConfig>> = {
     thinking: false,
     sessionHealth: false,
     useBars: false,
+    showCache: true,
+    showCost: true,
   },
   focused: {
     omcLabel: true,
@@ -348,6 +361,8 @@ export const PRESET_CONFIGS: Record<HudPreset, Partial<HudElementConfig>> = {
     thinking: true,
     sessionHealth: true,
     useBars: true,
+    showCache: true,
+    showCost: true,
   },
   full: {
     omcLabel: true,
@@ -367,6 +382,8 @@ export const PRESET_CONFIGS: Record<HudPreset, Partial<HudElementConfig>> = {
     thinking: true,
     sessionHealth: true,
     useBars: true,
+    showCache: true,
+    showCost: true,
   },
   opencode: {
     omcLabel: true,
@@ -386,6 +403,8 @@ export const PRESET_CONFIGS: Record<HudPreset, Partial<HudElementConfig>> = {
     thinking: true,
     sessionHealth: true,
     useBars: false,
+    showCache: true,
+    showCost: true,
   },
   dense: {
     omcLabel: true,
@@ -405,5 +424,7 @@ export const PRESET_CONFIGS: Record<HudPreset, Partial<HudElementConfig>> = {
     thinking: true,
     sessionHealth: true,
     useBars: true,
+    showCache: true,
+    showCost: true,
   },
 };

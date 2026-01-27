@@ -38,6 +38,8 @@ describe('AutopilotCancel', () => {
 
   beforeEach(() => {
     testDir = mkdtempSync(join(tmpdir(), 'autopilot-cancel-test-'));
+    const fs = require('fs');
+    fs.mkdirSync(join(testDir, '.omc', 'state'), { recursive: true });
     vi.clearAllMocks();
   });
 
@@ -56,10 +58,12 @@ describe('AutopilotCancel', () => {
 
     it('should return failure when state exists but is not active', () => {
       const state = initAutopilot(testDir, 'test idea');
-      state.active = false;
-      const stateFile = join(testDir, '.omc', 'autopilot-state.json');
-      const fs = require('fs');
-      fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
+      if (state) {
+        state.active = false;
+        const stateFile = join(testDir, '.omc', 'state', 'autopilot-state.json');
+        const fs = require('fs');
+        fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
+      }
 
       const result = cancelAutopilot(testDir);
 
@@ -500,6 +504,9 @@ describe('AutopilotCancel', () => {
 
     it('should handle zero progress in summary', () => {
       const state = initAutopilot(testDir, 'test idea');
+      if (!state) {
+        throw new Error('Failed to initialize autopilot');
+      }
 
       const result: CancelResult = {
         success: true,
@@ -516,6 +523,9 @@ describe('AutopilotCancel', () => {
 
     it('should handle cleanup message in preserved state format', () => {
       const state = initAutopilot(testDir, 'test idea');
+      if (!state) {
+        throw new Error('Failed to initialize autopilot');
+      }
       state.active = false;
 
       const result: CancelResult = {

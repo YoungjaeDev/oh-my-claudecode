@@ -488,6 +488,19 @@ The pipeline orchestrator:
 7. **Persists state** - Updates state file after each stage
 8. **Enforces verification** - Runs checks before completion
 
+## STATE CLEANUP ON COMPLETION
+
+**IMPORTANT: Delete state files on completion - do NOT just set `active: false`**
+
+When pipeline completes (all stages done or cancelled):
+
+```bash
+# Delete pipeline state file
+rm -f .omc/state/pipeline-state.json
+```
+
+This ensures clean state for future sessions. Stale state files with `active: false` should not be left behind.
+
 ## Skill Invocation
 
 This skill activates when:

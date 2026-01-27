@@ -324,7 +324,7 @@ describe('Installer Constants', () => {
 
     it('should match package.json version', () => {
       // This is a runtime check - VERSION should match the package.json
-      expect(VERSION).toBe('3.4.0');
+      expect(VERSION).toBe('3.7.0');
     });
   });
 
@@ -349,7 +349,8 @@ describe('Installer Constants', () => {
       ];
 
       for (const path of paths) {
-        expect(path).toMatch(/^[/~]/); // Starts with / or ~ (absolute)
+        // Absolute path: starts with / or ~ (Unix) or drive letter like C: (Windows)
+        expect(path).toMatch(/^([/~]|[A-Za-z]:)/);
       }
     });
   });

@@ -13,8 +13,9 @@ export interface AuditEntry {
   timestamp: string;
   tool: string;
   filePath: string;
-  decision: 'allowed' | 'warned';
+  decision: 'allowed' | 'warned' | 'blocked';
   reason: 'allowed_path' | 'source_file' | 'other';
+  enforcementLevel?: 'off' | 'warn' | 'strict';
   sessionId?: string;
 }
 

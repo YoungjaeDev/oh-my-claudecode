@@ -5,7 +5,199 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.5.5] - 2026-01-25
+## [3.7.0] - 2026-01-27
+
+### Added
+
+#### Rate Limit Auto-Resume (Major Feature)
+Automatic session resumption when rate limits reset for users running in tmux.
+
+- **Rate Limit Monitor** (`src/features/rate-limit-wait/`)
+  - OAuth API-based rate limit status checking
+  - tmux pane detection for blocked Claude Code sessions
+  - Background daemon that polls and auto-resumes when limit clears
+  - CLI commands: `omc wait status`, `omc wait daemon start/stop`, `omc wait detect`
+
+- **Security Hardening**
+  - Secure file permissions (0600) for state/PID/log files
+  - Input validation for tmux pane IDs (prevents command injection)
+  - Text sanitization for tmux send-keys commands
+  - Log rotation (1MB limit) to prevent unbounded growth
+
+- **Smart CLI** (`src/cli/commands/wait.ts`)
+  - Zero learning curve: `omc wait` shows status and suggests next action
+  - `omc wait --start` / `--stop` shortcuts
+  - 61 tests covering real-world scenarios
+
+#### Async Hook Lifecycle Modules (5 New Hooks)
+Claude Code integration hooks for session and tool lifecycle events.
+
+- **SubagentTracker** (`src/hooks/subagent-tracker/`)
+  - Track active subagents with parent mode context
+  - File locking mechanism to prevent race conditions
+  - Bounded storage (max 100 completed agents) with eviction
+
+- **PreCompact** (`src/hooks/pre-compact/`)
+  - Preserve critical state before context compaction
+  - Auto-save important discoveries to notepad
+
+- **Setup** (`src/hooks/setup/`)
+  - Directory structure initialization on session start
+  - Periodic maintenance tasks
+
+- **PermissionRequest** (`src/hooks/permission-handler/`)
+  - Smart auto-approval for safe commands during active modes
+  - Shell metacharacter injection prevention
+  - Safe command allowlist (git, npm, tsc, eslint, pytest, etc.)
+
+- **SessionEnd** (`src/hooks/session-end/`)
+  - Record session metrics
+  - Cleanup transient state
+  - Export summaries
+
+#### Delegation Enforcement (Production-Ready)
+Configurable enforcement for orchestrator delegation behavior.
+
+- **Configuration Levels**
+  - `off`: No enforcement
+  - `warn`: Warnings for direct source file edits (default)
+  - `strict`: Block direct source file modifications
+
+- **Performance Optimizations**
+  - 30-second TTL cache for config reads (avoids sync I/O on hot path)
+  - Fixed nullish coalescing bug (`||` → `??`)
+
+- **Smart Agent Suggestions**
+  - Suggests appropriate agent based on file extension
+  - Audit logging to `.omc/logs/delegation-audit.jsonl`
+
+- **635 tests** for delegation enforcement levels
+
+### Fixed
+
+- **Shell Metacharacter Injection** (CRITICAL): Added `DANGEROUS_SHELL_CHARS` regex to reject commands with `;`, `&`, `|`, `` ` ``, `$`, `()`, `<>`, `\n`, `\\`
+- **Blanket Auto-Approval** (CRITICAL): Active modes now require BOTH `isActiveModeRunning()` AND `isSafeCommand()` checks
+- **Arbitrary File Access** (HIGH): Removed `cat`, `head`, `tail` from safe command patterns
+- **Race Condition** (HIGH): Added file locking to subagent-tracker with 5-second timeout
+- **Unbounded Memory** (HIGH): Capped `completed_agents` at 100 with oldest-first eviction
+- **Config Caching**: Added 30s TTL cache to avoid sync file reads on every tool call
+
+### Technical Details
+
+**New Files:**
+- `src/features/rate-limit-wait/` - Rate limit auto-resume feature (6 files)
+- `src/cli/commands/wait.ts` - CLI integration
+- `src/hooks/subagent-tracker/index.ts` - Subagent lifecycle tracking
+- `src/hooks/pre-compact/index.ts` - Pre-compaction state preservation
+- `src/hooks/session-end/index.ts` - Session end cleanup
+- `src/hooks/setup/index.ts` - Directory initialization
+- `src/hooks/permission-handler/index.ts` - Permission request handling
+- `scripts/*.mjs` - Standalone hook entry scripts (6 files)
+- `SECURITY-FIXES.md` - Security fix documentation
+
+**Tests Added:**
+- 61 rate-limit-wait tests (daemon, integration, monitor, tmux-detector)
+- 69 permission-handler security tests
+- 635 delegation-enforcement-levels tests
+
+**Configuration:**
+- Local: `.omc/config.json` → `delegationEnforcementLevel`
+- Global: `~/.claude/.omc-config.json` → `delegationEnforcementLevel`
+
+## [3.6.3] - 2026-01-27
+
+### Fixed
+
+- Fix npm package references (`oh-my-claudecode` → `oh-my-claude-sisyphus`) in docs/MIGRATION.md, commands/doctor.md, skills/doctor/SKILL.md
+
+## [3.6.2] - 2026-01-27
+
+### Added
+
+#### Project Session Manager (PSM) Skill
+New skill for managing isolated project sessions with automatic context injection.
+
+- **PSM Skill** (`skills/psm/`)
+  - `/oh-my-claudecode:psm` command for project session management
+  - Automatic CLAUDE.md and AGENTS.md injection on session start
+  - Project isolation with dedicated session contexts
+  - Session persistence and resume support
+  - Integration with existing oh-my-claudecode workflows
+
+### Changed
+
+- Updated skill count: 40 → 41 (added psm)
+
+## [3.6.0] - 2026-01-26
+
+### Added
+
+#### SQLite-based Swarm Coordination (Major Feature)
+Production-ready multi-agent task coordination with atomic claiming and transaction isolation.
+
+- **SQLite Database Backend** (`src/hooks/swarm/`)
+  - Atomic task claiming with IMMEDIATE transaction mode
+  - Lease-based ownership with 5-minute timeout
+  - Heartbeat monitoring for agent health
+  - Stale claim cleanup with automatic release
+  - WAL mode for concurrent read access
+
+- **Mode Registry** (`src/hooks/mode-registry/`)
+  - Centralized mode state detection via file-based approach
+  - Mutual exclusion between exclusive modes (autopilot, ultrapilot, swarm, pipeline)
+  - Stale marker detection with 1-hour auto-removal
+  - Marker file management for SQLite-based modes
+
+- **Worker Preamble Protocol** (`src/agents/preamble.ts`)
+  - Prevents worker agents from spawning their own sub-agents
+  - Ensures agents use tools directly (Read, Write, Edit, Bash)
+  - Requires agents to report results with absolute file paths
+  - Documented in AGENTS.md
+
+- **Ultrapilot Decomposer** (`src/hooks/ultrapilot/decomposer.ts`)
+  - AI-powered task decomposition for parallel execution
+  - File ownership assignment with non-overlapping patterns
+  - Dependency tracking and execution order calculation
+
+- **37 new tests** across 3 test files for swarm coordination
+
+### Changed
+
+#### State File Standardization
+All execution mode state files consolidated into `.omc/state/` subdirectory:
+- `autopilot-state.json`
+- `ralph-state.json`
+- `ultrawork-state.json`
+- `ultraqa-state.json`
+- `ultrapilot-state.json`
+- `swarm.db` (SQLite database)
+- `pipeline-state.json`
+- `ecomode-state.json`
+
+#### Skill Files Updated
+All skill files now include explicit "STATE CLEANUP ON COMPLETION" sections instructing to delete state files rather than just setting `active: false`.
+
+### Fixed
+
+- **Path consistency**: Fixed path mismatches between mode-registry and cancel skill
+- **Transaction isolation**: All 6 swarm transactions use `.immediate()` for proper write locking
+- **Init error handling**: `cleanupOnFailure()` prevents leftover state on initialization errors
+
+### Technical Details
+
+**New Files:**
+- `src/hooks/swarm/index.ts` - Main swarm coordination module
+- `src/hooks/swarm/state.ts` - SQLite state management
+- `src/hooks/swarm/claiming.ts` - Atomic task claiming
+- `src/hooks/swarm/types.ts` - TypeScript interfaces
+- `src/hooks/mode-registry/types.ts` - Mode registry types
+- `src/agents/preamble.ts` - Worker preamble protocol
+- `src/hooks/ultrapilot/decomposer.ts` - Task decomposition
+
+**Dependencies Added:**
+- `better-sqlite3` - SQLite3 binding for Node.js
+
+## [3.5.7] - 2026-01-25
 
 ### Added
 - feat(skills): add learn-about-omc skill for usage pattern analysis
@@ -553,9 +745,9 @@ This is a **breaking release** that renames the entire project and all agent nam
 
 ### Breaking Changes
 
-- **Package Renamed**: `oh-my-claude-sisyphus` → `oh-my-claudecode`
-  - Installation: `npx oh-my-claudecode install` (previously `npx oh-my-claude-sisyphus install`)
-  - All references updated in documentation and code
+- **Project Renamed**: Project renamed to `oh-my-claudecode`
+  - npm package remains `oh-my-claude-sisyphus`: `npx oh-my-claude-sisyphus install`
+  - Plugin name is `oh-my-claudecode` for Claude Code integration
 
 - **Agent Names Changed**: Greek mythology → Intuitive names
   - `prometheus` → `planner` (strategic planning)
@@ -587,7 +779,7 @@ This is a **breaking release** that renames the entire project and all agent nam
 
 For existing users upgrading from 2.x:
 
-1. **Reinstall**: Run `npx oh-my-claudecode install` to update hooks and configs
+1. **Reinstall**: Run `npx oh-my-claude-sisyphus install` to update hooks and configs
 2. **State Migration**: Old `.sisyphus/` directories will continue to work, but new state saves to `.omc/`
 3. **Agent References**: Update any custom scripts/configs that referenced old agent names
 4. **Environment Variables**: Rename any `SISYPHUS_*` variables to `OMC_*`

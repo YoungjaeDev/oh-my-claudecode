@@ -2,6 +2,7 @@ import { getTokenTracker } from './token-tracker.js';
 import { getSessionManager } from './session-manager.js';
 import { getMetricsCollector, aggregators } from './metrics-collector.js';
 import { calculateCost } from './cost-estimator.js';
+import { getTokscaleAdapter, TokscaleAdapter } from './tokscale-adapter.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { homedir } from 'os';
@@ -29,6 +30,72 @@ export interface UsagePattern {
 
 export class QueryEngine {
   async getCostReport(period: 'daily' | 'weekly' | 'monthly'): Promise<CostReport> {
+    const adapter = await getTokscaleAdapter();
+
+    if (adapter.isAvailable && adapter.getReport) {
+      return this.getCostReportViaTokscale(adapter, period);
+    }
+
+    // Fallback to existing implementation
+    return this.getCostReportLegacy(period);
+  }
+
+  private async getCostReportViaTokscale(
+    adapter: TokscaleAdapter,
+    period: 'daily' | 'weekly' | 'monthly'
+  ): Promise<CostReport> {
+    const range = this.calculateTimeRange(period);
+
+    try {
+      const report = await adapter.getReport!();
+
+      // Get agent data from local JSONL (populated by backfill)
+      const byAgent = await this.getAgentCostFromLocalLog(range);
+
+      const byModel: Record<string, number> = {};
+      for (const [model, data] of Object.entries(report.byModel)) {
+        byModel[model] = data.cost;
+      }
+
+      return {
+        totalCost: report.totalCost,
+        byAgent, // From local JSONL
+        byModel,
+        byDay: {},
+        period,
+        range
+      };
+    } catch (error) {
+      // If tokscale fails, fall back to legacy
+      return this.getCostReportLegacy(period);
+    }
+  }
+
+  // UNUSED: Kept for reference, but tokscale path no longer mixes local JSONL
+  // private async convertParsedToEntries(parsed: any[], range: TimeRange): Promise<any[]> {
+  //   const tokenLogPath = path.join(homedir(), '.omc', 'state', 'token-tracking.jsonl');
+  //   const entries: any[] = [];
+  //
+  //   try {
+  //     const content = await fs.readFile(tokenLogPath, 'utf-8');
+  //     const lines = content.trim().split('\n').filter(l => l.length > 0);
+  //
+  //     for (const line of lines) {
+  //       const record = JSON.parse(line);
+  //
+  //       // Filter by time range
+  //       if (record.timestamp >= range.start && record.timestamp <= range.end) {
+  //         entries.push(record);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     // Return empty if error
+  //   }
+  //
+  //   return entries;
+  // }
+
+  private async getCostReportLegacy(period: 'daily' | 'weekly' | 'monthly'): Promise<CostReport> {
     const range = this.calculateTimeRange(period);
     const tokenLogPath = path.join(homedir(), '.omc', 'state', 'token-tracking.jsonl');
 
@@ -92,6 +159,42 @@ export class QueryEngine {
         range
       };
     }
+  }
+
+  // Hybrid data merging: Read agent attribution from local JSONL
+  private async getAgentCostFromLocalLog(range: TimeRange): Promise<Record<string, number>> {
+    const tokenLogPath = path.join(homedir(), '.omc', 'state', 'token-tracking.jsonl');
+    const byAgent: Record<string, number> = {};
+
+    try {
+      const content = await fs.readFile(tokenLogPath, 'utf-8');
+      const lines = content.trim().split('\n').filter(l => l.length > 0);
+
+      for (const line of lines) {
+        const record = JSON.parse(line);
+
+        // Filter by time range
+        if (record.timestamp < range.start || record.timestamp > range.end) {
+          continue;
+        }
+
+        // Aggregate by agent
+        if (record.agentName) {
+          const cost = calculateCost({
+            modelName: record.modelName,
+            inputTokens: record.inputTokens,
+            outputTokens: record.outputTokens,
+            cacheCreationTokens: record.cacheCreationTokens,
+            cacheReadTokens: record.cacheReadTokens
+          });
+          byAgent[record.agentName] = (byAgent[record.agentName] || 0) + cost.totalCost;
+        }
+      }
+    } catch (error) {
+      // Return empty if error
+    }
+
+    return byAgent;
   }
 
   async getUsagePatterns(): Promise<UsagePattern> {

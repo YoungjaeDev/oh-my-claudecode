@@ -1,5 +1,6 @@
 import { readState, writeState, StateLocation } from '../features/state-manager/index.js';
 import { TokenUsage, SessionTokenStats, AggregateTokenStats } from './types.js';
+import { getTokscaleAdapter, TokscaleAdapter, TokscaleReport } from './tokscale-adapter.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { homedir } from 'os';
@@ -124,6 +125,115 @@ export class TokenTracker {
   }
 
   async getAllStats(): Promise<AggregateTokenStats> {
+    const adapter = await getTokscaleAdapter();
+
+    if (adapter.isAvailable && adapter.getReport) {
+      return this.getAllStatsViaTokscale(adapter);
+    }
+
+    // Fallback to existing implementation
+    return this.getAllStatsLegacy();
+  }
+
+  private async getAllStatsViaTokscale(adapter: TokscaleAdapter): Promise<AggregateTokenStats> {
+    try {
+      // Get tokscale report using the new unified API
+      const report = await adapter.getReport!();
+
+      // Get agent data from local JSONL (populated by backfill)
+      const agentData = await this.getAgentDataFromLocalLog();
+
+      // Map tokscale report to our AggregateTokenStats format
+      // Merge tokscale model-level data with local agent-level data
+      return {
+        totalInputTokens: report.totalInputTokens,
+        totalOutputTokens: report.totalOutputTokens,
+        totalCacheCreation: report.totalCacheCreationTokens,
+        totalCacheRead: report.totalCacheReadTokens,
+        totalCost: report.totalCost,
+        byAgent: agentData.byAgent, // From local JSONL
+        byModel: report.byModel || {},
+        sessionCount: agentData.sessionCount || 1,
+        entryCount: report.totalEntries,
+        firstEntry: agentData.firstEntry,
+        lastEntry: agentData.lastEntry
+      };
+    } catch (error) {
+      // If tokscale fails, fall back to legacy implementation
+      return this.getAllStatsLegacy();
+    }
+  }
+
+  // Hybrid data merging: Read agent attribution from local JSONL
+  private async getAgentDataFromLocalLog(): Promise<{
+    byAgent: Record<string, { tokens: number; cost: number }>;
+    sessionCount: number;
+    entryCount: number;
+    firstEntry: string | null;
+    lastEntry: string | null;
+  }> {
+    const { calculateCost } = await import('./cost-estimator.js');
+
+    const result = {
+      byAgent: {} as Record<string, { tokens: number; cost: number }>,
+      sessionCount: 0,
+      entryCount: 0,
+      firstEntry: null as string | null,
+      lastEntry: null as string | null
+    };
+
+    try {
+      const content = await fs.readFile(TOKEN_LOG_FILE, 'utf-8');
+      const lines = content.trim().split('\n').filter(line => line.trim());
+
+      if (lines.length === 0) {
+        return result;
+      }
+
+      const sessions = new Set<string>();
+
+      for (const line of lines) {
+        const record: TokenUsage = JSON.parse(line);
+        result.entryCount++;
+
+        // Track unique sessions
+        sessions.add(record.sessionId);
+
+        // Track timestamps
+        if (!result.firstEntry || record.timestamp < result.firstEntry) {
+          result.firstEntry = record.timestamp;
+        }
+        if (!result.lastEntry || record.timestamp > result.lastEntry) {
+          result.lastEntry = record.timestamp;
+        }
+
+        // Calculate cost for this record
+        const cost = calculateCost({
+          modelName: record.modelName,
+          inputTokens: record.inputTokens,
+          outputTokens: record.outputTokens,
+          cacheCreationTokens: record.cacheCreationTokens,
+          cacheReadTokens: record.cacheReadTokens
+        });
+
+        // Aggregate by agent (use "(main session)" for entries without agentName)
+        const agentKey = record.agentName || '(main session)';
+        if (!result.byAgent[agentKey]) {
+          result.byAgent[agentKey] = { tokens: 0, cost: 0 };
+        }
+        result.byAgent[agentKey].tokens += record.inputTokens + record.outputTokens;
+        result.byAgent[agentKey].cost += cost.totalCost;
+      }
+
+      result.sessionCount = sessions.size;
+      return result;
+    } catch (error) {
+      // If file doesn't exist or is empty, return empty result
+      return result;
+    }
+  }
+
+  private async getAllStatsLegacy(): Promise<AggregateTokenStats> {
     const { calculateCost } = await import('./cost-estimator.js');
 
     const stats: AggregateTokenStats = {

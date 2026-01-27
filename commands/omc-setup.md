@@ -6,6 +6,45 @@ description: One-time setup for oh-my-claudecode (the ONLY command you need to l
 
 This is the **only command you need to learn**. After running this, everything else is automatic.
 
+## Graceful Interrupt Handling
+
+**IMPORTANT**: This setup process saves progress after each step. If interrupted (Ctrl+C or connection loss), the setup can resume from where it left off.
+
+### Resume Detection (Step 0)
+
+Before starting any step, check for existing state:
+
+```bash
+# Check for existing setup state
+STATE_FILE=".omc/state/setup-state.json"
+if [ -f "$STATE_FILE" ]; then
+  # Check if state is stale (older than 24 hours)
+  STATE_AGE=$(($(date +%s) - $(date -d "$(jq -r .timestamp "$STATE_FILE" 2>/dev/null || echo "1970-01-01")" +%s 2>/dev/null || echo 0)))
+  if [ "$STATE_AGE" -gt 86400 ]; then
+    echo "Previous setup state is more than 24 hours old. Starting fresh."
+    rm -f "$STATE_FILE"
+  else
+    LAST_STEP=$(jq -r ".lastCompletedStep // 0" "$STATE_FILE" 2>/dev/null || echo "0")
+    TIMESTAMP=$(jq -r .timestamp "$STATE_FILE" 2>/dev/null || echo "unknown")
+    echo "Found previous setup session (Step $LAST_STEP completed at $TIMESTAMP)"
+  fi
+fi
+```
+
+If state exists, use AskUserQuestion to prompt:
+
+**Question:** "Found a previous setup session. Would you like to resume or start fresh?"
+
+**Options:**
+1. **Resume from step $LAST_STEP** - Continue where you left off
+2. **Start fresh** - Begin from the beginning (clears saved state)
+
+If user chooses "Start fresh":
+```bash
+rm -f ".omc/state/setup-state.json"
+echo "Previous state cleared. Starting fresh setup."
+```
+
 ## Step 1: Ask User Preference
 
 Use the AskUserQuestion tool to prompt the user:
@@ -82,6 +121,45 @@ fi
 
 **Note:** The `npm install` command triggers the `prepare` script which runs `npm run build`, creating the dist/ directory with all compiled HUD files.
 
+## Step 3.6: Install CLI Analytics Tools (Optional)
+
+The OMC CLI provides standalone token analytics commands (`omc stats`, `omc agents`, `omc backfill`, `omc tui`).
+
+Ask user: "Would you like to install the OMC CLI for standalone analytics? (Recommended for tracking token usage and costs)"
+
+**Options:**
+1. **Yes (Recommended)** - Install CLI tools globally for `omc stats`, `omc agents`, etc.
+2. **No** - Skip CLI installation, use only plugin skills
+
+### If User Chooses YES:
+
+```bash
+# Check for bun (preferred) or npm
+if command -v bun &> /dev/null; then
+  echo "Installing OMC CLI via bun..."
+  bun install -g oh-my-claude-sisyphus
+elif command -v npm &> /dev/null; then
+  echo "Installing OMC CLI via npm..."
+  npm install -g oh-my-claude-sisyphus
+else
+  echo "ERROR: Neither bun nor npm found. Please install Node.js or Bun first."
+  exit 1
+fi
+
+# Verify installation
+if command -v omc &> /dev/null; then
+  echo "✓ OMC CLI installed successfully!"
+  echo "  Try: omc stats, omc agents, omc backfill"
+else
+  echo "⚠ CLI installed but 'omc' not in PATH."
+  echo "  You may need to restart your terminal or add npm/bun global bin to PATH."
+fi
+```
+
+### If User Chooses NO:
+
+Skip this step. User can install later with `npm install -g oh-my-claude-sisyphus`.
+
 ## Step 4: Verify Plugin Installation
 
 ```bash
@@ -144,6 +222,12 @@ Run /oh-my-claudecode:mcp-setup to add tools like web search, GitHub, etc.
 HUD STATUSLINE:
 The status bar now shows OMC state. Restart Claude Code to see it.
 
+CLI ANALYTICS (if installed):
+- omc           - Full dashboard (stats + agents + cost)
+- omc stats     - View token usage and costs
+- omc agents    - See agent breakdown by cost
+- omc tui       - Launch interactive TUI dashboard
+
 That's it! Just use Claude Code normally.
 ```
 
@@ -173,7 +257,51 @@ MAGIC KEYWORDS (power-user shortcuts):
 HUD STATUSLINE:
 The status bar now shows OMC state. Restart Claude Code to see it.
 
+CLI ANALYTICS (if installed):
+- omc           - Full dashboard (stats + agents + cost)
+- omc stats     - View token usage and costs
+- omc agents    - See agent breakdown by cost
+- omc tui       - Launch interactive TUI dashboard
+
 Your workflow won't break - it just got easier!
+```
+
+## Step 8: Ask About Starring Repository
+
+First, check if `gh` CLI is available and authenticated:
+
+```bash
+gh auth status &>/dev/null
+```
+
+### If gh is available and authenticated:
+
+Use the AskUserQuestion tool to prompt the user:
+
+**Question:** "If you're enjoying oh-my-claudecode, would you like to support the project by starring it on GitHub?"
+
+**Options:**
+1. **Yes, star it!** - Star the repository
+2. **No thanks** - Skip without further prompts
+3. **Maybe later** - Skip without further prompts
+
+If user chooses "Yes, star it!":
+
+```bash
+gh api -X PUT /user/starred/Yeachan-Heo/oh-my-claudecode 2>/dev/null && echo "Thanks for starring! ⭐" || echo "Could not star - you can star manually at https://github.com/Yeachan-Heo/oh-my-claudecode"
+```
+
+**Note:** Fail gracefully if the API call doesn't work - never block setup completion.
+
+### If gh is NOT available or not authenticated:
+
+Skip the AskUserQuestion and just display:
+
+```bash
+echo ""
+echo "If you enjoy oh-my-claudecode, consider starring the repo:"
+echo "  https://github.com/Yeachan-Heo/oh-my-claudecode"
+echo ""
 ```
 
 ## Fallback

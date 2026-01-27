@@ -22,5 +22,11 @@ export * from './analytics-summary.js';
 export * from './transcript-scanner.js';
 export * from './transcript-parser.js';
 export * from './transcript-token-extractor.js';
+
+// DEPRECATED: Backfill is no longer needed - tokscale reads transcripts directly
+// Kept for backward compatibility but no longer used by CLI
 export * from './backfill-dedup.js';
 export * from './backfill-engine.js';
+
+// Tokscale integration (replaces backfill)
+export * from './tokscale-adapter.js';

@@ -126,3 +126,17 @@ Before stopping, verify:
 3. **Prefer executor-low** for simple changes - only upgrade if it fails
 4. **Avoid opus agents** unless the task genuinely requires deep reasoning
 5. **Use writer (haiku)** for all documentation tasks
+
+## STATE CLEANUP ON COMPLETION
+
+**IMPORTANT: Delete state files on completion - do NOT just set `active: false`**
+
+When ecomode completes (all verification passes):
+
+```bash
+# Delete ecomode state files
+rm -f .omc/state/ecomode-state.json
+rm -f ~/.claude/ecomode-state.json
+```
+
+This ensures clean state for future sessions. Stale state files with `active: false` should not be left behind.

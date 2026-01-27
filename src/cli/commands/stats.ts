@@ -81,12 +81,16 @@ export async function statsCommand(options: { json?: boolean; session?: string }
     console.log(`Cache Read: ${formatTokenCount(aggregate.totalCacheRead)} | Cache Write: ${formatTokenCount(aggregate.totalCacheCreation)}`);
     console.log(`Total Cost: ${formatCostWithColor(aggregate.totalCost)}`);
 
-    // Display top agents
+    // Display top agents (only if data available - not tracked by tokscale)
     if (topAgents.length > 0) {
       console.log(colors.bold('\n🤖 Top Agents by Cost (All Sessions)\n'));
       for (const agent of topAgents) {
         console.log(`  ${agent.agent.padEnd(25)} ${formatTokenCount(agent.tokens).padStart(8)} tokens  ${formatCostWithColor(agent.cost)}`);
       }
+    } else {
+      // Agent tracking is not available when using tokscale
+      console.log(colors.gray('\nNo agent data available. Run backfill to enable agent tracking:'));
+      console.log(colors.cyan('  omc backfill'));
     }
 
     console.log('');

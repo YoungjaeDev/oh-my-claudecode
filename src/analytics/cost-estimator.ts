@@ -1,4 +1,5 @@
 import { PRICING, ModelPricing, CostBreakdown } from './types.js';
+import { lookupPricingWithFallback } from './tokscale-adapter.js';
 
 export interface CostInput {
   modelName: string;
@@ -8,6 +9,10 @@ export interface CostInput {
   cacheReadTokens: number;
 }
 
+/**
+ * Synchronous cost calculation using hardcoded pricing.
+ * Fast path for HUD and sync operations that need instant response.
+ */
 export function calculateCost(input: CostInput): CostBreakdown {
   const pricing = getPricingForModel(input.modelName);
 
@@ -34,6 +39,82 @@ export function calculateCost(input: CostInput): CostBreakdown {
     cacheReadCost,
     totalCost
   };
+}
+
+/**
+ * Asynchronous cost calculation using live TokScale pricing.
+ * Provides up-to-date pricing with fallback to hardcoded values.
+ */
+export async function calculateCostAsync(input: CostInput): Promise<CostBreakdown> {
+  const pricing = await lookupPricingWithFallback(input.modelName);
+
+  // Base input cost
+  const inputCost = (input.inputTokens / 1_000_000) * pricing.inputPerMillion;
+
+  // Output cost
+  const outputCost = (input.outputTokens / 1_000_000) * pricing.outputPerMillion;
+
+  // Cache write cost (25% markup on input price)
+  const cacheWriteCost = (input.cacheCreationTokens / 1_000_000) *
+    pricing.inputPerMillion * (1 + pricing.cacheWriteMarkup);
+
+  // Cache read cost (90% discount on input price)
+  const cacheReadCost = (input.cacheReadTokens / 1_000_000) *
+    pricing.inputPerMillion * (1 - pricing.cacheReadDiscount);
+
+  const totalCost = inputCost + outputCost + cacheWriteCost + cacheReadCost;
+
+  return {
+    inputCost,
+    outputCost,
+    cacheWriteCost,
+    cacheReadCost,
+    totalCost
+  };
+}
+
+/**
+ * Batch cost calculation with efficient pricing lookup.
+ * Fetches pricing once per unique model for better performance.
+ */
+export async function batchCalculateCost(inputs: CostInput[]): Promise<CostBreakdown[]> {
+  // Get all unique models first
+  const models = [...new Set(inputs.map(i => i.modelName))];
+  const pricingMap = new Map<string, ModelPricing>();
+
+  // Fetch pricing for all unique models
+  for (const model of models) {
+    pricingMap.set(model, await lookupPricingWithFallback(model));
+  }
+
+  // Calculate costs using cached pricing
+  return inputs.map(input => {
+    const pricing = pricingMap.get(input.modelName)!;
+
+    // Base input cost
+    const inputCost = (input.inputTokens / 1_000_000) * pricing.inputPerMillion;
+
+    // Output cost
+    const outputCost = (input.outputTokens / 1_000_000) * pricing.outputPerMillion;
+
+    // Cache write cost (25% markup on input price)
+    const cacheWriteCost = (input.cacheCreationTokens / 1_000_000) *
+      pricing.inputPerMillion * (1 + pricing.cacheWriteMarkup);
+
+    // Cache read cost (90% discount on input price)
+    const cacheReadCost = (input.cacheReadTokens / 1_000_000) *
+      pricing.inputPerMillion * (1 - pricing.cacheReadDiscount);
+
+    const totalCost = inputCost + outputCost + cacheWriteCost + cacheReadCost;
+
+    return {
+      inputCost,
+      outputCost,
+      cacheWriteCost,
+      cacheReadCost,
+      totalCost
+    };
+  });
 }
 
 function getPricingForModel(modelName: string): ModelPricing {

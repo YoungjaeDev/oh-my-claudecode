@@ -100,38 +100,95 @@ backend frontend database api-docs tests
 
 **Agent:** Architect (Opus)
 
-**Process:**
-1. Analyze task requirements
-2. Identify independent components
-3. Define subtask boundaries
-4. Specify file ownership for each
-5. Identify shared files (handled last)
+**Method:** AI-Powered Task Decomposition
 
-**Output:** `.omc/ultrapilot/decomposition.json`
+Ultrapilot uses the `decomposer` module to generate intelligent task breakdowns:
+
+```typescript
+import {
+  generateDecompositionPrompt,
+  parseDecompositionResult,
+  validateFileOwnership,
+  extractSharedFiles
+} from 'src/hooks/ultrapilot/decomposer';
+
+// 1. Generate prompt for Architect
+const prompt = generateDecompositionPrompt(task, codebaseContext, {
+  maxSubtasks: 5,
+  preferredModel: 'sonnet'
+});
+
+// 2. Call Architect agent
+const response = await Task({
+  subagent_type: 'oh-my-claudecode:architect',
+  model: 'opus',
+  prompt
+});
+
+// 3. Parse structured result
+const result = parseDecompositionResult(response);
+
+// 4. Validate no file conflicts
+const { isValid, conflicts } = validateFileOwnership(result.subtasks);
+
+// 5. Extract shared files from subtasks
+const finalResult = extractSharedFiles(result);
+```
+
+**Process:**
+1. Analyze task requirements via Architect agent
+2. Identify independent components with file boundaries
+3. Assign agent type (executor-low/executor/executor-high) per complexity
+4. Map dependencies between subtasks (blockedBy)
+5. Generate parallel execution groups
+6. Identify shared files (handled by coordinator)
+
+**Output:** Structured `DecompositionResult`:
 
 ```json
 {
   "subtasks": [
     {
-      "id": "worker-1",
+      "id": "1",
       "description": "Backend API routes",
-      "files": ["src/api/**"],
-      "dependencies": []
+      "files": ["src/api/routes.ts", "src/api/handlers.ts"],
+      "blockedBy": [],
+      "agentType": "executor",
+      "model": "sonnet"
     },
     {
-      "id": "worker-2",
+      "id": "2",
       "description": "Frontend components",
-      "files": ["src/ui/**"],
-      "dependencies": []
+      "files": ["src/ui/App.tsx", "src/ui/TodoList.tsx"],
+      "blockedBy": [],
+      "agentType": "executor",
+      "model": "sonnet"
+    },
+    {
+      "id": "3",
+      "description": "Wire frontend to backend",
+      "files": ["src/client/api.ts"],
+      "blockedBy": ["1", "2"],
+      "agentType": "executor-low",
+      "model": "haiku"
     }
   ],
   "sharedFiles": [
     "package.json",
     "tsconfig.json",
     "README.md"
-  ]
+  ],
+  "parallelGroups": [["1", "2"], ["3"]]
 }
 ```
+
+**Decomposition Types:**
+
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `DecomposedTask` | Full task with id, files, blockedBy, agentType, model | Intelligent worker spawning |
+| `DecompositionResult` | Complete result with subtasks, sharedFiles, parallelGroups | Full decomposition output |
+| `toSimpleSubtasks()` | Convert to string[] for legacy compatibility | Simple task lists |
 
 ### Phase 2: File Ownership Partitioning
 
@@ -545,6 +602,18 @@ You can provide a custom decomposition file to skip Phase 1:
 Then run:
 ```
 /oh-my-claudecode:ultrapilot --custom-decomposition
+```
+
+## STATE CLEANUP ON COMPLETION
+
+**IMPORTANT: Delete state files on completion - do NOT just set `active: false`**
+
+When all workers complete successfully:
+
+```bash
+# Delete ultrapilot state files
+rm -f .omc/state/ultrapilot-state.json
+rm -f .omc/state/ultrapilot-ownership.json
 ```
 
 ## Future Enhancements

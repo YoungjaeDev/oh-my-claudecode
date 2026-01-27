@@ -188,12 +188,33 @@ DO NOT output the completion promise without Architect verification.
 - NO Premature Stopping - ALL TODOs must be complete
 - NO TEST DELETION - fix code, not tests
 
+## STATE CLEANUP ON COMPLETION
+
+**IMPORTANT: Delete state files on successful completion - do NOT just set `active: false`**
+
+When outputting the completion promise after Architect verification:
+
+```bash
+# Delete ralph state file (and linked ultrawork if applicable)
+rm -f .omc/state/ralph-state.json
+rm -f .omc/state/ralph-verification.json
+rm -f ~/.claude/ralph-state.json
+
+# If ultrawork was linked, delete it too
+rm -f .omc/state/ultrawork-state.json
+rm -f ~/.claude/ultrawork-state.json
+```
+
+This ensures clean state for future sessions. Stale state files with `active: false` should not be left behind.
+
 ## INSTRUCTIONS
 
 - Review your progress so far
 - Continue from where you left off
 - Use parallel execution and background tasks
-- When FULLY complete AND Architect verified, output: <promise>{{PROMISE}}</promise>
+- When FULLY complete AND Architect verified:
+  1. Clean up state files (delete ralph-state.json, ultrawork-state.json)
+  2. Output: <promise>{{PROMISE}}</promise>
 - Do not stop until the task is truly done
 
 Original task:

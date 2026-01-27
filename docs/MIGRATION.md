@@ -131,7 +131,7 @@ The package has been renamed to better reflect its purpose and improve discovera
 npm install -g oh-my-claude-sisyphus
 
 # New
-npm install -g oh-my-claudecode
+npm install -g oh-my-claude-sisyphus
 ```
 
 ### What Changed
@@ -302,7 +302,7 @@ npm uninstall -g oh-my-claude-sisyphus
 #### 2. Install New Package
 
 ```bash
-npm install -g oh-my-claudecode
+npm install -g oh-my-claude-sisyphus
 ```
 
 #### 3. Rename Local Project Directories
@@ -363,7 +363,7 @@ After migration, verify your setup:
 
 1. **Check installation**:
    ```bash
-   npm list -g oh-my-claudecode
+   npm list -g oh-my-claude-sisyphus
    ```
 
 2. **Verify directories exist**:
@@ -547,7 +547,7 @@ Background agents can be resumed with full context via `resume-session` tool.
 Version 3.1 is a drop-in upgrade. No migration required!
 
 ```bash
-npm update -g oh-my-claudecode
+npm update -g oh-my-claude-sisyphus
 ```
 
 All existing configurations, plans, and workflows continue working unchanged.
@@ -694,7 +694,7 @@ Users set their default mode preference via `/oh-my-claudecode:omc-setup`.
 Version 3.4.0 is a drop-in upgrade. No migration required!
 
 ```bash
-npm update -g oh-my-claudecode
+npm update -g oh-my-claude-sisyphus
 ```
 
 All existing configurations, plans, and workflows continue working unchanged.
@@ -763,7 +763,7 @@ After upgrading, verify new features:
 
 1. **Check installation**:
    ```bash
-   npm list -g oh-my-claudecode
+   npm list -g oh-my-claude-sisyphus
    ```
 
 2. **Test ultrapilot**:

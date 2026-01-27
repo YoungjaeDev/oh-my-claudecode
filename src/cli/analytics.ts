@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
+import chalk from 'chalk';
 import { statsCommand } from './commands/stats.js';
 import { costCommand } from './commands/cost.js';
 import { sessionsCommand } from './commands/sessions.js';
 import { agentsCommand } from './commands/agents.js';
 import { exportCommand } from './commands/export.js';
 import { cleanupCommand } from './commands/cleanup.js';
+import {
+  launchTokscaleTUI,
+  isTokscaleCLIAvailable,
+  getInstallInstructions
+} from './utils/tokscale-launcher.js';
 
 program
   .name('omc-analytics')
@@ -77,6 +83,42 @@ program
   .option('--retention <days>', 'Retention period in days', '30')
   .action(options => {
     cleanupCommand({ ...options, retention: parseInt(options.retention) });
+  });
+
+// TUI command
+program
+  .command('tui')
+  .description('Launch tokscale interactive TUI for token visualization')
+  .option('--light', 'Use light theme')
+  .option('--models', 'Show models view')
+  .option('--daily', 'Show daily view')
+  .option('--stats', 'Show stats view')
+  .option('--no-claude', 'Show all providers (not just Claude)')
+  .action(async (options) => {
+    const available = await isTokscaleCLIAvailable();
+
+    if (!available) {
+      console.log(chalk.yellow('tokscale is not installed.'));
+      console.log(getInstallInstructions());
+      process.exit(1);
+    }
+
+    const view = options.models ? 'models'
+               : options.daily ? 'daily'
+               : options.stats ? 'stats'
+               : 'overview';
+
+    try {
+      await launchTokscaleTUI({
+        light: options.light,
+        view,
+        claude: options.claude
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(chalk.red(`Failed to launch TUI: ${message}`));
+      process.exit(1);
+    }
   });
 
 program.parse();

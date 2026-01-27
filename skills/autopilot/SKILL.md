@@ -149,6 +149,24 @@ If autopilot was cancelled or failed, just run `/oh-my-claudecode:autopilot` aga
 3. **Specify constraints** - "using TypeScript", "with PostgreSQL"
 4. **Let it run** - Don't interrupt unless truly needed
 
+## STATE CLEANUP ON COMPLETION
+
+**IMPORTANT: Delete ALL state files on successful completion**
+
+When autopilot reaches the `complete` phase (all validation passed):
+
+```bash
+# Delete autopilot and all sub-mode state files
+rm -f .omc/state/autopilot-state.json
+rm -f .omc/state/ralph-state.json
+rm -f .omc/state/ultrawork-state.json
+rm -f .omc/state/ultraqa-state.json
+rm -f ~/.claude/ralph-state.json
+rm -f ~/.claude/ultrawork-state.json
+```
+
+This ensures clean state for future sessions.
+
 ## Troubleshooting
 
 **Stuck in a phase?**

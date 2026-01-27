@@ -16,7 +16,7 @@ INSTALLED=$(ls ~/.claude/plugins/cache/omc/oh-my-claudecode/ 2>/dev/null | sort 
 echo "Installed: $INSTALLED"
 
 # Get latest from npm
-LATEST=$(npm view oh-my-claudecode version 2>/dev/null)
+LATEST=$(npm view oh-my-claude-sisyphus version 2>/dev/null)
 echo "Latest: $LATEST"
 ```
 

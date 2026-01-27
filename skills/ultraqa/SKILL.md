@@ -117,6 +117,19 @@ User can cancel with `/oh-my-claudecode:cancel` which clears the state file.
 4. **CLEAR OUTPUT** - User should always know current cycle and status
 5. **CLEAN UP** - Clear state file on completion or cancellation
 
+## STATE CLEANUP ON COMPLETION
+
+**IMPORTANT: Delete state files on completion - do NOT just set `active: false`**
+
+When goal is met OR max cycles reached OR exiting early:
+
+```bash
+# Delete ultraqa state file
+rm -f .omc/state/ultraqa-state.json
+```
+
+This ensures clean state for future sessions. Stale state files with `active: false` should not be left behind.
+
 ---
 
 Begin ULTRAQA cycling now. Parse the goal and start cycle 1.

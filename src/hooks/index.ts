@@ -664,3 +664,138 @@ export {
   type IntegrationResult,
   type FileOwnership
 } from './ultrapilot/index.js';
+
+// Mode Registry (Centralized State Management)
+export {
+  MODE_CONFIGS,
+  getStateDir,
+  ensureStateDir as ensureModeStateDir,
+  getStateFilePath as getModeStateFilePath,
+  getMarkerFilePath as getModeMarkerFilePath,
+  getGlobalStateFilePath,
+  clearModeState,
+  hasModeState,
+  getActiveModes,
+  clearAllModeStates,
+  // Additional functions from PR #111
+  isModeActive,
+  getActiveExclusiveMode,
+  canStartMode,
+  getAllModeStatuses,
+  createModeMarker,
+  removeModeMarker,
+  readModeMarker,
+  type ExecutionMode,
+  type ModeConfig,
+  type ModeStatus,
+  type CanStartResult
+} from './mode-registry/index.js';
+
+export {
+  // Swarm Coordination
+  startSwarm,
+  stopSwarm,
+  getSwarmStatus,
+  getSwarmStats,
+  claimTask,
+  releaseTask,
+  completeTask,
+  failTask,
+  heartbeat,
+  cleanupStaleClaims,
+  hasPendingWork,
+  isSwarmComplete,
+  getActiveAgents,
+  getAllTasks,
+  getTasksWithStatus,
+  getTaskById,
+  getAgentTasks,
+  getAllHeartbeats,
+  retryTask,
+  isSwarmReady,
+  connectToSwarm,
+  disconnectFromSwarm,
+  isSwarmActive,
+  cancelSwarm,
+  DEFAULT_SWARM_CONFIG,
+  type SwarmTask,
+  type SwarmState,
+  type SwarmConfig,
+  type SwarmStats,
+  type ClaimResult,
+  type AgentHeartbeat
+} from './swarm/index.js';
+
+export {
+  // Setup Hook
+  ensureDirectoryStructure,
+  validateConfigFiles,
+  setEnvironmentVariables,
+  processSetupInit,
+  pruneOldStateFiles,
+  cleanupOrphanedState,
+  vacuumSwarmDb,
+  processSetupMaintenance,
+  processSetup,
+  type SetupInput,
+  type SetupResult,
+  type HookOutput as SetupHookOutput
+} from './setup/index.js';
+
+export {
+  // Subagent Tracker Hook
+  processSubagentStart,
+  processSubagentStop,
+  handleSubagentStart,
+  handleSubagentStop,
+  readTrackingState,
+  writeTrackingState,
+  getStateFilePath as getSubagentStateFilePath,
+  getStaleAgents,
+  cleanupStaleAgents,
+  getActiveAgentCount,
+  getAgentsByType,
+  getRunningAgents,
+  getTrackingStats,
+  clearTrackingState,
+  type SubagentInfo,
+  type SubagentTrackingState,
+  type SubagentStartInput,
+  type SubagentStopInput,
+  type HookOutput as SubagentHookOutput
+} from './subagent-tracker/index.js';
+
+export {
+  // PreCompact Hook
+  processPreCompact,
+  getCheckpointPath,
+  exportWisdomToNotepad,
+  saveModeSummary,
+  createCompactCheckpoint,
+  formatCompactSummary as formatPreCompactSummary,
+  type PreCompactInput,
+  type CompactCheckpoint,
+  type HookOutput as PreCompactHookOutput
+} from './pre-compact/index.js';
+
+export {
+  // Permission Handler Hook
+  processPermissionRequest,
+  handlePermissionRequest,
+  isSafeCommand,
+  isActiveModeRunning,
+  type PermissionRequestInput,
+  type HookOutput as PermissionHookOutput
+} from './permission-handler/index.js';
+
+export {
+  // Session End Hook
+  processSessionEnd,
+  handleSessionEnd,
+  recordSessionMetrics,
+  cleanupTransientState,
+  exportSessionSummary,
+  type SessionEndInput,
+  type SessionMetrics,
+  type HookOutput as SessionEndHookOutput
+} from './session-end/index.js';

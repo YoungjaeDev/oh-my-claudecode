@@ -21,6 +21,7 @@ import {
   clearUltraQAState,
   readUltraQAState
 } from '../ultraqa/index.js';
+import { canStartMode } from '../mode-registry/index.js';
 
 const STATE_FILE = 'autopilot-state.json';
 const SPEC_DIR = 'autopilot';
@@ -34,16 +35,16 @@ const SPEC_DIR = 'autopilot';
  */
 function getStateFilePath(directory: string): string {
   const omcDir = join(directory, '.omc');
-  return join(omcDir, STATE_FILE);
+  return join(omcDir, 'state', STATE_FILE);
 }
 
 /**
- * Ensure the .omc directory exists
+ * Ensure the .omc/state directory exists
  */
-function ensureOmcDir(directory: string): void {
-  const omcDir = join(directory, '.omc');
-  if (!existsSync(omcDir)) {
-    mkdirSync(omcDir, { recursive: true });
+function ensureStateDir(directory: string): void {
+  const stateDir = join(directory, '.omc', 'state');
+  if (!existsSync(stateDir)) {
+    mkdirSync(stateDir, { recursive: true });
   }
 }
 
@@ -51,7 +52,7 @@ function ensureOmcDir(directory: string): void {
  * Ensure the autopilot directory exists
  */
 export function ensureAutopilotDir(directory: string): string {
-  ensureOmcDir(directory);
+  ensureStateDir(directory);
   const autopilotDir = join(directory, '.omc', SPEC_DIR);
   if (!existsSync(autopilotDir)) {
     mkdirSync(autopilotDir, { recursive: true });
@@ -82,7 +83,7 @@ export function readAutopilotState(directory: string): AutopilotState | null {
  */
 export function writeAutopilotState(directory: string, state: AutopilotState): boolean {
   try {
-    ensureOmcDir(directory);
+    ensureStateDir(directory);
     const stateFile = getStateFilePath(directory);
     writeFileSync(stateFile, JSON.stringify(state, null, 2));
     return true;
@@ -125,7 +126,14 @@ export function initAutopilot(
   idea: string,
   sessionId?: string,
   config?: Partial<AutopilotConfig>
-): AutopilotState {
+): AutopilotState | null {
+  // Mutual exclusion check via mode-registry
+  const canStart = canStartMode('autopilot', directory);
+  if (!canStart.allowed) {
+    console.error(canStart.message);
+    return null;
+  }
+
   const mergedConfig = { ...DEFAULT_CONFIG, ...config };
   const now = new Date().toISOString();
 

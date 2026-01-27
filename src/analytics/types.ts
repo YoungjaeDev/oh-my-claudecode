@@ -99,6 +99,24 @@ export interface AggregateTokenStats {
   lastEntry: string | null;
 }
 
+/**
+ * Pricing result that indicates the source of pricing data
+ */
+export interface TokscalePricingResult {
+  inputPerMillion: number;
+  outputPerMillion: number;
+  cacheReadPerMillion?: number;
+  cacheWritePerMillion?: number;
+  cacheWriteMarkup: number;
+  cacheReadDiscount: number;
+  source: 'tokscale' | 'fallback';
+}
+
+/**
+ * Fallback pricing when @tokscale/core is unavailable.
+ * Prefer lookupPricingWithFallback() from tokscale-adapter.ts for live pricing.
+ * @deprecated Use tokscale-adapter.ts lookupPricingWithFallback() instead
+ */
 export const PRICING: Record<string, ModelPricing> = {
   'claude-haiku-4': {
     inputPerMillion: 0.80,

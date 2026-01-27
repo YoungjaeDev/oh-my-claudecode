@@ -56,16 +56,16 @@ const SAME_FAILURE_THRESHOLD = 3;
  */
 function getStateFilePath(directory: string): string {
   const omcDir = join(directory, '.omc');
-  return join(omcDir, 'ultraqa-state.json');
+  return join(omcDir, 'state', 'ultraqa-state.json');
 }
 
 /**
- * Ensure the .omc directory exists
+ * Ensure the .omc/state directory exists
  */
 function ensureStateDir(directory: string): void {
-  const omcDir = join(directory, '.omc');
-  if (!existsSync(omcDir)) {
-    mkdirSync(omcDir, { recursive: true });
+  const stateDir = join(directory, '.omc', 'state');
+  if (!existsSync(stateDir)) {
+    mkdirSync(stateDir, { recursive: true });
   }
 }
 

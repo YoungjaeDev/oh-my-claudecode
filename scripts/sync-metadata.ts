@@ -123,7 +123,7 @@ function getFileSyncConfigs(): FileSync[] {
       ],
     },
     {
-      path: 'docs/FULL-README.md',
+      path: 'docs/REFERENCE.md',
       replacements: [
         {
           pattern: /\[!\[Version\]\(https:\/\/img\.shields\.io\/badge\/version-[^-]+-[^)]+\)/g,
@@ -319,7 +319,7 @@ ${color('Description:', colors.cyan)}
 
 ${color('Files Synced:', colors.cyan)}
   - README.md (npm badges)
-  - docs/FULL-README.md (version badges and headers)
+  - docs/REFERENCE.md (version badges and headers)
   - .github/CLAUDE.md (agent/skill counts)
   - docs/ARCHITECTURE.md (version references)
   - CHANGELOG.md (version header verification)

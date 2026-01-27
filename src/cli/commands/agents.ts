@@ -4,7 +4,8 @@ import { colors, renderTable, formatCostWithColor, formatTokenCount } from '../u
 export async function agentsCommand(options: { json?: boolean; limit?: number }): Promise<void> {
   const tracker = getTokenTracker();
   const stats = tracker.getSessionStats();
-  const topAgents = await tracker.getTopAgents(options.limit || 10);
+  // Use getTopAgentsAllSessions to read from file rather than in-memory session stats
+  const topAgents = await tracker.getTopAgentsAllSessions(options.limit || 10);
 
   if (options.json) {
     console.log(JSON.stringify({ topAgents, stats }, null, 2));
@@ -14,7 +15,8 @@ export async function agentsCommand(options: { json?: boolean; limit?: number })
   console.log(colors.bold('\n🤖 Agent Usage Breakdown\n'));
 
   if (topAgents.length === 0) {
-    console.log(colors.gray('No agent usage recorded yet.\n'));
+    console.log(colors.gray('No agent data available yet.'));
+    console.log(colors.gray('Run `omc backfill` to extract agent usage from Claude transcripts.\n'));
     return;
   }
 

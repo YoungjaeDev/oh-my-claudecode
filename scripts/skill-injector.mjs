@@ -4,34 +4,41 @@
  * Skill Injector Hook (UserPromptSubmit)
  * Injects relevant learned skills into context based on prompt triggers.
  *
- * STANDALONE SCRIPT - does not import from dist/
- * Follows pattern of keyword-detector.mjs and session-start.mjs
+ * STANDALONE SCRIPT - uses compiled bridge bundle from dist/hooks/skill-bridge.cjs
+ * Falls back to inline implementation if bundle not available (first run before build)
+ *
+ * Enhancement in v3.5: Now uses RECURSIVE discovery (skills in subdirectories included)
  */
 
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'fs';
-import { join } from 'path';
+import { join, basename } from 'path';
 import { homedir } from 'os';
+import { createRequire } from 'module';
 
-// Constants
+// Try to load the compiled bridge bundle
+const require = createRequire(import.meta.url);
+let bridge = null;
+try {
+  bridge = require('../dist/hooks/skill-bridge.cjs');
+} catch {
+  // Bridge not available - use fallback (first run before build, or dist/ missing)
+}
+
+// Constants (used by fallback)
 const USER_SKILLS_DIR = join(homedir(), '.claude', 'skills', 'omc-learned');
 const PROJECT_SKILLS_SUBDIR = '.omc/skills';
 const SKILL_EXTENSION = '.md';
 const MAX_SKILLS_PER_SESSION = 5;
 
-// Session cache to avoid re-injecting same skills
-const injectedCache = new Map();
+// =============================================================================
+// Fallback Implementation (used when bridge bundle not available)
+// =============================================================================
 
-// Read all stdin
-async function readStdin() {
-  const chunks = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString('utf-8');
-}
+// In-memory cache (resets each process - known limitation, fixed by bridge)
+const injectedCacheFallback = new Map();
 
-// Parse YAML frontmatter from skill file
-function parseSkillFrontmatter(content) {
+// Parse YAML frontmatter from skill file (fallback)
+function parseSkillFrontmatterFallback(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
   if (!match) return null;
 
@@ -56,8 +63,8 @@ function parseSkillFrontmatter(content) {
   return { name, triggers, content: body };
 }
 
-// Find all skill files
-function findSkillFiles(directory) {
+// Find all skill files (fallback - NON-RECURSIVE for backward compat)
+function findSkillFilesFallback(directory) {
   const candidates = [];
   const seenPaths = new Set();
 
@@ -111,17 +118,17 @@ function findSkillFiles(directory) {
   return candidates;
 }
 
-// Find matching skills by trigger keywords
-function findMatchingSkills(prompt, directory, sessionId) {
+// Find matching skills (fallback)
+function findMatchingSkillsFallback(prompt, directory, sessionId) {
   const promptLower = prompt.toLowerCase();
-  const candidates = findSkillFiles(directory);
+  const candidates = findSkillFilesFallback(directory);
   const matches = [];
 
   // Get or create session cache
-  if (!injectedCache.has(sessionId)) {
-    injectedCache.set(sessionId, new Set());
+  if (!injectedCacheFallback.has(sessionId)) {
+    injectedCacheFallback.set(sessionId, new Set());
   }
-  const alreadyInjected = injectedCache.get(sessionId);
+  const alreadyInjected = injectedCacheFallback.get(sessionId);
 
   for (const candidate of candidates) {
     // Skip if already injected this session
@@ -129,7 +136,7 @@ function findMatchingSkills(prompt, directory, sessionId) {
 
     try {
       const content = readFileSync(candidate.path, 'utf-8');
-      const skill = parseSkillFrontmatter(content);
+      const skill = parseSkillFrontmatterFallback(content);
       if (!skill) continue;
 
       // Check if any trigger matches
@@ -146,7 +153,8 @@ function findMatchingSkills(prompt, directory, sessionId) {
           name: skill.name,
           content: skill.content,
           score,
-          scope: candidate.scope
+          scope: candidate.scope,
+          triggers: skill.triggers
         });
       }
     } catch {
@@ -166,6 +174,39 @@ function findMatchingSkills(prompt, directory, sessionId) {
   return selected;
 }
 
+// =============================================================================
+// Main Logic (uses bridge if available, fallback otherwise)
+// =============================================================================
+
+// Read all stdin
+async function readStdin() {
+  const chunks = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf-8');
+}
+
+// Find matching skills - delegates to bridge or fallback
+function findMatchingSkills(prompt, directory, sessionId) {
+  if (bridge) {
+    // Use bridge (RECURSIVE discovery, persistent session cache)
+    const matches = bridge.matchSkillsForInjection(prompt, directory, sessionId, {
+      maxResults: MAX_SKILLS_PER_SESSION
+    });
+
+    // Mark as injected via bridge
+    if (matches.length > 0) {
+      bridge.markSkillsInjected(sessionId, matches.map(s => s.path), directory);
+    }
+
+    return matches;
+  }
+
+  // Fallback (NON-RECURSIVE, in-memory cache)
+  return findMatchingSkillsFallback(prompt, directory, sessionId);
+}
+
 // Format skills for injection
 function formatSkillsMessage(skills) {
   const lines = [
@@ -179,7 +220,17 @@ function formatSkillsMessage(skills) {
 
   for (const skill of skills) {
     lines.push(`### ${skill.name} (${skill.scope})`);
+
+    // Add metadata block for programmatic parsing
+    const metadata = {
+      path: skill.path,
+      triggers: skill.triggers,
+      score: skill.score,
+      scope: skill.scope
+    };
+    lines.push(`<skill-metadata>${JSON.stringify(metadata)}</skill-metadata>`);
     lines.push('');
+
     lines.push(skill.content);
     lines.push('');
     lines.push('---');

@@ -78,6 +78,19 @@ Then, use the Write tool to create `~/.claude/hud/omc-hud.mjs` with this exact c
 import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+// Semantic version comparison: returns negative if a < b, positive if a > b, 0 if equal
+function semverCompare(a, b) {
+  const pa = a.replace(/^v/, "").split(".").map(Number);
+  const pb = b.replace(/^v/, "").split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na !== nb) return na - nb;
+  }
+  return 0;
+}
 
 async function main() {
   const home = homedir();
@@ -89,11 +102,11 @@ async function main() {
     try {
       const versions = readdirSync(pluginCacheBase);
       if (versions.length > 0) {
-        const latestVersion = versions.sort().reverse()[0];
+        const latestVersion = versions.sort(semverCompare).reverse()[0];
         pluginCacheDir = join(pluginCacheBase, latestVersion);
         const pluginPath = join(pluginCacheDir, "dist/hud/index.js");
         if (existsSync(pluginPath)) {
-          await import(pluginPath);
+          await import(pathToFileURL(pluginPath).href);
           return;
         }
       }
@@ -111,7 +124,7 @@ async function main() {
   for (const devPath of devPaths) {
     if (existsSync(devPath)) {
       try {
-        await import(devPath);
+        await import(pathToFileURL(devPath).href);
         return;
       } catch { /* continue */ }
     }
@@ -135,12 +148,31 @@ chmod +x ~/.claude/hud/omc-hud.mjs
 
 **Step 4:** Update settings.json to use the HUD:
 
-Read `~/.claude/settings.json`, then update/add the `statusLine` field:
+Read `~/.claude/settings.json`, then update/add the `statusLine` field.
+
+**IMPORTANT:** The command must use an absolute path, not `~`, because Windows does not expand `~` in shell commands.
+
+First, determine the correct path:
+```bash
+node -e "const p=require('path').join(require('os').homedir(),'.claude','hud','omc-hud.mjs');console.log(JSON.stringify(p))"
+```
+
+Then set the `statusLine` field using the resolved path. On Unix it will look like:
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "node ~/.claude/hud/omc-hud.mjs"
+    "command": "node /home/username/.claude/hud/omc-hud.mjs"
+  }
+}
+```
+
+On Windows it will look like:
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node C:\\Users\\username\\.claude\\hud\\omc-hud.mjs"
   }
 }
 ```

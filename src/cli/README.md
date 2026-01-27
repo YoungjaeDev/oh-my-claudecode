@@ -7,7 +7,7 @@ Command-line interface for Oh-My-ClaudeCode analytics, token tracking, cost repo
 After installing oh-my-claudecode:
 
 ```bash
-npm install -g oh-my-claudecode
+npm install -g oh-my-claude-sisyphus
 ```
 
 The `omc-analytics` command will be available globally.

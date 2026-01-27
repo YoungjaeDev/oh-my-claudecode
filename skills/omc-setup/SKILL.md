@@ -7,6 +7,76 @@ description: Setup and configure oh-my-claudecode (the ONLY command you need to 
 
 This is the **only command you need to learn**. After running this, everything else is automatic.
 
+## Graceful Interrupt Handling
+
+**IMPORTANT**: This setup process saves progress after each step. If interrupted (Ctrl+C or connection loss), the setup can resume from where it left off.
+
+### State File Location
+- `.omc/state/setup-state.json` - Tracks completed steps
+
+### Resume Detection (Step 0)
+
+Before starting any step, check for existing state:
+
+```bash
+# Check for existing setup state
+STATE_FILE=".omc/state/setup-state.json"
+if [ -f "$STATE_FILE" ]; then
+  # Check if state is stale (older than 24 hours)
+  STATE_AGE=$(($(date +%s) - $(date -d "$(jq -r .timestamp "$STATE_FILE" 2>/dev/null || echo "1970-01-01")" +%s 2>/dev/null || echo 0)))
+  if [ "$STATE_AGE" -gt 86400 ]; then
+    echo "Previous setup state is more than 24 hours old. Starting fresh."
+    rm -f "$STATE_FILE"
+  else
+    LAST_STEP=$(jq -r ".lastCompletedStep // 0" "$STATE_FILE" 2>/dev/null || echo "0")
+    TIMESTAMP=$(jq -r .timestamp "$STATE_FILE" 2>/dev/null || echo "unknown")
+    echo "Found previous setup session (Step $LAST_STEP completed at $TIMESTAMP)"
+  fi
+fi
+```
+
+If state exists, use AskUserQuestion to prompt:
+
+**Question:** "Found a previous setup session. Would you like to resume or start fresh?"
+
+**Options:**
+1. **Resume from step $LAST_STEP** - Continue where you left off
+2. **Start fresh** - Begin from the beginning (clears saved state)
+
+If user chooses "Start fresh":
+```bash
+rm -f ".omc/state/setup-state.json"
+echo "Previous state cleared. Starting fresh setup."
+```
+
+### Save Progress Helper
+
+After completing each major step, save progress:
+
+```bash
+# Save setup progress (call after each step)
+# Usage: save_setup_progress STEP_NUMBER
+save_setup_progress() {
+  mkdir -p .omc/state
+  cat > ".omc/state/setup-state.json" << EOF
+{
+  "lastCompletedStep": $1,
+  "timestamp": "$(date -Iseconds)",
+  "configType": "${CONFIG_TYPE:-unknown}"
+}
+EOF
+}
+```
+
+### Clear State on Completion
+
+After successful setup completion (Step 7/8), remove the state file:
+
+```bash
+rm -f ".omc/state/setup-state.json"
+echo "Setup completed successfully. State cleared."
+```
+
 ## Usage Modes
 
 This skill handles three scenarios:
@@ -23,6 +93,8 @@ Check for flags in the user's invocation:
 - If no flags → Run Initial Setup wizard (Step 1)
 
 ## Step 1: Initial Setup Wizard (Default Behavior)
+
+**Note**: If resuming and lastCompletedStep >= 1, skip to the appropriate step based on configType.
 
 Use the AskUserQuestion tool to prompt the user:
 
@@ -49,6 +121,14 @@ mkdir -p .claude && echo ".claude directory ready"
 # Extract old version before download
 OLD_VERSION=$(grep -m1 "^# oh-my-claudecode" .claude/CLAUDE.md 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "none")
 
+# Backup existing CLAUDE.md before overwriting (if it exists)
+if [ -f ".claude/CLAUDE.md" ]; then
+  BACKUP_DATE=$(date +%Y-%m-%d)
+  BACKUP_PATH=".claude/CLAUDE.md.backup.${BACKUP_DATE}"
+  cp .claude/CLAUDE.md "$BACKUP_PATH"
+  echo "Backed up existing CLAUDE.md to $BACKUP_PATH"
+fi
+
 # Download fresh CLAUDE.md from GitHub
 curl -fsSL "https://raw.githubusercontent.com/Yeachan-Heo/oh-my-claudecode/main/docs/CLAUDE.md" -o .claude/CLAUDE.md && \
 echo "Downloaded CLAUDE.md to .claude/CLAUDE.md"
@@ -66,6 +146,8 @@ fi
 
 **Note**: The downloaded CLAUDE.md includes Context Persistence instructions with `<remember>` tags for surviving conversation compaction.
 
+**Note**: If an existing CLAUDE.md is found, it will be backed up to `.claude/CLAUDE.md.backup.YYYY-MM-DD` before downloading the new version.
+
 **MANDATORY**: Always run this command. Do NOT skip. Do NOT use Write tool.
 
 **FALLBACK** if curl fails:
@@ -80,10 +162,23 @@ grep -q "oh-my-claudecode" ~/.claude/settings.json && echo "Plugin verified" || 
 
 ### Confirm Local Configuration Success
 
-After completing local configuration, report:
+After completing local configuration, save progress and report:
+
+```bash
+# Save progress - Step 2 complete (Local config)
+mkdir -p .omc/state
+cat > ".omc/state/setup-state.json" << EOF
+{
+  "lastCompletedStep": 2,
+  "timestamp": "$(date -Iseconds)",
+  "configType": "local"
+}
+EOF
+```
 
 **OMC Project Configuration Complete**
 - CLAUDE.md: Updated with latest configuration from GitHub at ./.claude/CLAUDE.md
+- Backup: Previous CLAUDE.md backed up to `.claude/CLAUDE.md.backup.YYYY-MM-DD` (if existed)
 - Scope: **PROJECT** - applies only to this project
 - Hooks: Provided by plugin (no manual installation needed)
 - Agents: 28+ available (base + tiered variants)
@@ -91,7 +186,11 @@ After completing local configuration, report:
 
 **Note**: This configuration is project-specific and won't affect other projects or global settings.
 
-If `--local` flag was used, **STOP HERE**. Do not continue to HUD setup or other steps.
+If `--local` flag was used, clear state and **STOP HERE**:
+```bash
+rm -f ".omc/state/setup-state.json"
+```
+Do not continue to HUD setup or other steps.
 
 ## Step 2B: Global Configuration (--global flag or user chose GLOBAL)
 
@@ -102,6 +201,14 @@ If `--local` flag was used, **STOP HERE**. Do not continue to HUD setup or other
 ```bash
 # Extract old version before download
 OLD_VERSION=$(grep -m1 "^# oh-my-claudecode" ~/.claude/CLAUDE.md 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "none")
+
+# Backup existing CLAUDE.md before overwriting (if it exists)
+if [ -f "$HOME/.claude/CLAUDE.md" ]; then
+  BACKUP_DATE=$(date +%Y-%m-%d)
+  BACKUP_PATH="$HOME/.claude/CLAUDE.md.backup.${BACKUP_DATE}"
+  cp "$HOME/.claude/CLAUDE.md" "$BACKUP_PATH"
+  echo "Backed up existing CLAUDE.md to $BACKUP_PATH"
+fi
 
 # Download fresh CLAUDE.md to global config
 curl -fsSL "https://raw.githubusercontent.com/Yeachan-Heo/oh-my-claudecode/main/docs/CLAUDE.md" -o ~/.claude/CLAUDE.md && \
@@ -117,6 +224,8 @@ else
   echo "Updated CLAUDE.md: $OLD_VERSION -> $NEW_VERSION"
 fi
 ```
+
+**Note**: If an existing CLAUDE.md is found, it will be backed up to `~/.claude/CLAUDE.md.backup.YYYY-MM-DD` before downloading the new version.
 
 ### Clean Up Legacy Hooks (if present)
 
@@ -143,10 +252,23 @@ grep -q "oh-my-claudecode" ~/.claude/settings.json && echo "Plugin verified" || 
 
 ### Confirm Global Configuration Success
 
-After completing global configuration, report:
+After completing global configuration, save progress and report:
+
+```bash
+# Save progress - Step 2 complete (Global config)
+mkdir -p .omc/state
+cat > ".omc/state/setup-state.json" << EOF
+{
+  "lastCompletedStep": 2,
+  "timestamp": "$(date -Iseconds)",
+  "configType": "global"
+}
+EOF
+```
 
 **OMC Global Configuration Complete**
 - CLAUDE.md: Updated with latest configuration from GitHub at ~/.claude/CLAUDE.md
+- Backup: Previous CLAUDE.md backed up to `~/.claude/CLAUDE.md.backup.YYYY-MM-DD` (if existed)
 - Scope: **GLOBAL** - applies to all Claude Code sessions
 - Hooks: Provided by plugin (no manual installation needed)
 - Agents: 28+ available (base + tiered variants)
@@ -154,9 +276,15 @@ After completing global configuration, report:
 
 **Note**: Hooks are now managed by the plugin system automatically. No manual hook installation required.
 
-If `--global` flag was used, **STOP HERE**. Do not continue to HUD setup or other steps.
+If `--global` flag was used, clear state and **STOP HERE**:
+```bash
+rm -f ".omc/state/setup-state.json"
+```
+Do not continue to HUD setup or other steps.
 
 ## Step 3: Setup HUD Statusline
+
+**Note**: If resuming and lastCompletedStep >= 3, skip to Step 3.5.
 
 The HUD shows real-time status in Claude Code's status bar. **Invoke the hud skill** to set up and configure:
 
@@ -166,6 +294,20 @@ This will:
 1. Install the HUD wrapper script to `~/.claude/hud/omc-hud.mjs`
 2. Configure `statusLine` in `~/.claude/settings.json`
 3. Report status and prompt to restart if needed
+
+After HUD setup completes, save progress:
+```bash
+# Save progress - Step 3 complete (HUD setup)
+mkdir -p .omc/state
+CONFIG_TYPE=$(cat ".omc/state/setup-state.json" 2>/dev/null | grep -oE '"configType":\s*"[^"]+"' | cut -d'"' -f4 || echo "unknown")
+cat > ".omc/state/setup-state.json" << EOF
+{
+  "lastCompletedStep": 3,
+  "timestamp": "$(date -Iseconds)",
+  "configType": "$CONFIG_TYPE"
+}
+EOF
+```
 
 ## Step 3.5: Clear Stale Plugin Cache
 
@@ -266,6 +408,45 @@ echo "Default execution mode set to: USER_CHOICE"
 
 **Note**: This preference ONLY affects generic keywords ("fast", "parallel"). Explicit keywords ("ulw", "eco") always override this preference.
 
+## Step 3.8: Install CLI Analytics Tools (Optional)
+
+The OMC CLI provides standalone token analytics commands (`omc stats`, `omc agents`, `omc tui`).
+
+Ask user: "Would you like to install the OMC CLI for standalone analytics? (Recommended for tracking token usage and costs)"
+
+**Options:**
+1. **Yes (Recommended)** - Install CLI tools globally for `omc stats`, `omc agents`, etc.
+2. **No** - Skip CLI installation, use only plugin skills
+
+### If User Chooses YES:
+
+```bash
+# Check for bun (preferred) or npm
+if command -v bun &> /dev/null; then
+  echo "Installing OMC CLI via bun..."
+  bun install -g oh-my-claude-sisyphus
+elif command -v npm &> /dev/null; then
+  echo "Installing OMC CLI via npm..."
+  npm install -g oh-my-claude-sisyphus
+else
+  echo "ERROR: Neither bun nor npm found. Please install Node.js or Bun first."
+  exit 1
+fi
+
+# Verify installation
+if command -v omc &> /dev/null; then
+  echo "✓ OMC CLI installed successfully!"
+  echo "  Try: omc stats, omc agents, omc tui"
+else
+  echo "⚠ CLI installed but 'omc' not in PATH."
+  echo "  You may need to restart your terminal or add npm/bun global bin to PATH."
+fi
+```
+
+### If User Chooses NO:
+
+Skip this step. User can install later with `npm install -g oh-my-claude-sisyphus`.
+
 ## Step 4: Verify Plugin Installation
 
 ```bash
@@ -329,6 +510,12 @@ Run /oh-my-claudecode:mcp-setup to add tools like web search, GitHub, etc.
 HUD STATUSLINE:
 The status bar now shows OMC state. Restart Claude Code to see it.
 
+CLI ANALYTICS (if installed):
+- omc           - Full dashboard (stats + agents + cost)
+- omc stats     - View token usage and costs
+- omc agents    - See agent breakdown by cost
+- omc tui       - Launch interactive TUI dashboard
+
 That's it! Just use Claude Code normally.
 ```
 
@@ -358,6 +545,12 @@ MAGIC KEYWORDS (power-user shortcuts):
 
 HUD STATUSLINE:
 The status bar now shows OMC state. Restart Claude Code to see it.
+
+CLI ANALYTICS (if installed):
+- omc           - Full dashboard (stats + agents + cost)
+- omc stats     - View token usage and costs
+- omc agents    - See agent breakdown by cost
+- omc tui       - Launch interactive TUI dashboard
 
 Your workflow won't break - it just got easier!
 ```
@@ -398,6 +591,16 @@ echo "  https://github.com/Yeachan-Heo/oh-my-claudecode"
 echo ""
 ```
 
+### Clear Setup State on Completion
+
+After Step 8 completes (regardless of star choice), clear the setup state:
+
+```bash
+# Setup complete - clear state file
+rm -f ".omc/state/setup-state.json"
+echo "Setup completed successfully!"
+```
+
 ## Keeping Up to Date
 
 After installing oh-my-claudecode updates (via npm or plugin update), run:
@@ -429,11 +632,13 @@ MODES:
 
   Local Configuration (--local)
     - Downloads fresh CLAUDE.md to ./.claude/
+    - Backs up existing CLAUDE.md to .claude/CLAUDE.md.backup.YYYY-MM-DD
     - Project-specific settings
     - Use this to update project config after OMC upgrades
 
   Global Configuration (--global)
     - Downloads fresh CLAUDE.md to ~/.claude/
+    - Backs up existing CLAUDE.md to ~/.claude/CLAUDE.md.backup.YYYY-MM-DD
     - Applies to all Claude Code sessions
     - Cleans up legacy hooks
     - Use this to update global config after OMC upgrades

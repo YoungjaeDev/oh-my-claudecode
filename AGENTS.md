@@ -118,6 +118,29 @@ oh-my-claudecode/
 | **planner** | Opus | Strategic planning | Interview-style planning |
 | **qa-tester** | Sonnet | CLI/service testing | Interactive tmux testing |
 
+### Worker Preamble Protocol
+
+When orchestrators delegate work to worker agents (executor, explore, designer, etc.), they should use the Worker Preamble Protocol to ensure clean execution without sub-agent spawning.
+
+**Implementation**: Use `wrapWithPreamble()` from `src/agents/preamble.ts`
+
+**Purpose**:
+- Prevents worker agents from spawning their own sub-agents
+- Ensures agents use tools directly (Read, Write, Edit, Bash, etc.)
+- Requires agents to report results with absolute file paths
+- Keeps task execution focused and efficient
+
+**Example Usage**:
+```typescript
+import { wrapWithPreamble } from './agents/preamble';
+
+const taskDescription = "Add error handling to login function";
+const wrappedTask = wrapWithPreamble(taskDescription);
+// Delegate wrappedTask to worker agent
+```
+
+**Applies to**: All executor tiers, explore agents, designer agents, and other implementation-focused workers
+
 ## HOOKS
 
 | Hook | Event | Purpose |
@@ -222,7 +245,7 @@ Settings live in `~/.claude/settings.json`:
 ## NOTES
 
 - **Claude Code Version**: Requires Claude Code CLI
-- **Installation**: `npx oh-my-claudecode install`
+- **Installation**: `npx oh-my-claude-sisyphus install`
 - **Updates**: Silent auto-update checks
 - **Compatibility**: Designed for Claude Code, not OpenCode
 - **State Persistence**: Uses ~/.claude/.omc/ directory
