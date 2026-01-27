@@ -20,14 +20,25 @@ Break down large work items into manageable, independent issues. Follow project 
    - If TDD selected: Add `<!-- TDD: enabled -->` marker to each issue body
 4. Analyze work: Understand core requirements and objectives
 5. Decompose work: Split major tasks into **context-completable units** - each issue should be completable in a single Claude session without context switching. Group related features together rather than splitting by individual functions
-6. Analyze dependencies: Identify prerequisite tasks
-7. Suggest milestone name: Propose a milestone to group decomposed tasks
-8. Check related PRs (optional): Run `gh pr list --state closed --limit 20` for similar work references (skip if none)
-9. Output decomposed issues: Display issues with proposed milestone name
-10. Ask about GitHub creation: Use AskUserQuestion to let user decide on milestone and issue creation
+6. **Determine execution strategy (Phase 1)**: For each decomposed issue, apply Preliminary Pattern Selection:
+   - Check for specialist keywords (security, auth, UI, performance, data)
+   - Analyze scope keywords from work description
+   - Infer complexity from impact scope and subtask count
+   - Apply complexity adjustment
+   - Check TDD override
+   - Record preliminary pattern
+7. **Refine execution strategy (Phase 2)**: After generating file lists:
+   - Count actual files to modify
+   - Refine pattern based on file count thresholds
+   - Document final pattern with rationale (include any Phase 2 refinement)
+8. Analyze dependencies: Identify prerequisite tasks
+9. Suggest milestone name: Propose a milestone to group decomposed tasks
+10. Check related PRs (optional): Run `gh pr list --state closed --limit 20` for similar work references (skip if none)
+11. Output decomposed issues: Display issues with proposed milestone name
+12. Ask about GitHub creation: Use AskUserQuestion to let user decide on milestone and issue creation
     - Create milestone: `gh api repos/:owner/:repo/milestones -f title="Milestone Name" -f description="Description"`
     - Assign issues with `--milestone` option
-11. **Add issues to GitHub Project (optional)**
+13. **Add issues to GitHub Project (optional)**
    - Check for existing projects: `gh project list --owner <owner> --format json`
    - If no project exists: Display "No project found. You can create one with `/gh:init-project`" and skip
    - If project exists: Ask user via AskUserQuestion whether to add issues
@@ -102,24 +113,47 @@ Examples (vary by project, for reference only):
 ```
 
 **Completion criteria**:
-- [ ] Implementation complete (all tasks checked)
-- [ ] Execution verified (no runtime errors)
-- [ ] Tests pass (if applicable)
-- [ ] Added to demo page (for UI components, if applicable)
+<!-- For ralph-loop execution, ALL criteria must be verified before <promise>TASK_COMPLETE</promise> -->
+
+**Build & Quality Gates**:
+- [ ] Build passes (`npm run build` / `tsc --noEmit` / `cargo build` / equivalent)
+- [ ] Lint passes (`npm run lint` / `eslint` / `ruff` / equivalent)
+- [ ] Type check passes (if applicable)
+
+**Test Verification**:
+- [ ] All existing tests pass
+- [ ] New tests added for new functionality (if code change)
+- [ ] Test coverage maintained or improved
+
+**Functional Verification**:
+- [ ] Implementation complete (all tasks checked above)
+- [ ] Execution verified (actual runtime test, not just compile)
+- [ ] Edge cases handled (based on Implementation Steps)
+
+**Ralph-Loop Checkpoint** (if executed via ralph):
+- [ ] Zero pending/in_progress TODOs
+- [ ] Architect verification requested and APPROVED
+- [ ] No scope reduction from original requirements
+
+**Optional** (context-dependent):
+- [ ] Added to demo page (for UI components)
+- [ ] Documentation updated (for API changes)
+- [ ] Migration guide provided (for breaking changes)
 
 **Dependencies**:
 - [ ] None or prerequisite issue #number
 
-**Execution strategy**:
-- **Pattern**: main-only | sequential | parallel | delegation
-- **Delegate to**: (delegation only) agent name
+**Execution strategy** (auto-detected):
+- **Pattern**: [auto-selected based on Auto-Detection Algorithm]
+- **Rationale**: [brief explanation, e.g., "3 files, medium complexity, TDD enabled"]
+- **Delegate to**: [agent name if delegation, else "N/A"]
 
 **Execution diagram**:
 ```
-+------+
-| main |
-+------+
+[Auto-generated based on pattern - see Execution Patterns section]
 ```
+
+> **Manual Override**: If the auto-detected pattern is inappropriate, explicitly specify the desired pattern with justification.
 
 **References** (optional):
 - Add related PRs if available (e.g., PR #36 - brief description)
@@ -157,10 +191,10 @@ Pattern C: parallel
 +---------+
 
 Pattern D: delegation
-+------+     +----------------+
-| main | --> | python-pro     |
-+------+     | web-researcher |
-             +----------------+
++------+     +-------------------+
+| main | --> | security-reviewer |
++------+     | designer          |
+             +-------------------+
 
 Note: main can spawn subagents at any point during execution
 ```
@@ -172,28 +206,89 @@ Note: main can spawn subagents at any point during execution
 | Simple fix/change | main-only | Bug fix, single file change |
 | Analysis then implement | sequential | New feature, refactoring |
 | Complex analysis needed | parallel | Large refactor, architecture change |
-| Specialized work | delegation | Python optimization, technical research |
+| Specialized work | delegation | Security audit, UI redesign |
+
+### Auto-Detection Algorithm
+
+When decomposing issues, OMC MUST auto-determine the execution strategy using this 2-phase approach:
+
+---
+
+#### Phase 1: Preliminary Pattern Selection (During Issue Analysis)
+
+**Step 1: Check for Specialist Needs**
+| Keyword/Context in Issue | Pattern | Delegate To |
+|--------------------------|---------|-------------|
+| "security", "vulnerability", "CVE", "auth", "authentication", "login", "password", "encryption", "CSRF", "XSS", "CORS" | delegation | security-reviewer |
+| "performance", "optimize", "profile" | delegation | architect |
+| "UI", "component", "styling", "CSS" | delegation | designer |
+| "data analysis", "statistics", "ML" | delegation | scientist |
+| TDD marker present | sequential (minimum) | tdd-guide (coordination) |
+
+If specialist needed → Pattern D (delegation), STOP.
+
+**Step 2: Analyze Scope Keywords from Work Description**
+| Scope Signal in Description | Preliminary Pattern |
+|-----------------------------|---------------------|
+| "single file", "specific function", "one method", "this line" | `main-only` |
+| "module", "feature", "service", "endpoint", "component" | `sequential` |
+| "multiple modules", "across", "refactor", "system-wide", "global" | `parallel` |
+| No clear scope signal detected | `sequential` (default - safe middle ground) |
+
+**Step 3: Infer Complexity (if not labeled)**
+
+If issue has explicit `complexity:` label, use it. Otherwise, infer from signals:
+
+| Signal Combination | Inferred Complexity |
+|-------------------|---------------------|
+| `impactScope: local` AND `estimatedSubtasks: 1-2` | `easy` |
+| `impactScope: module` OR `estimatedSubtasks: 3-4` | `medium` |
+| `impactScope: system-wide` OR `estimatedSubtasks: 5+` | `hard` |
+| No clear signals | `medium` (default) |
+
+**Impact Scope Detection:**
+- `local`: Changes isolated to single function/class
+- `module`: Changes span multiple files in one module/feature
+- `system-wide`: Changes touch multiple modules or shared infrastructure
+
+**Step 4: Adjust by Complexity**
+| Complexity | Adjustment to Preliminary Pattern |
+|------------|-----------------------------------|
+| `easy` | Downgrade one level (parallel → sequential → main-only) |
+| `hard` | Upgrade one level (main-only → sequential → parallel) |
+| `medium` | No change |
+
+**Step 5: TDD Override**
+If TDD enabled AND pattern is `main-only` → Upgrade to `sequential` (need explore for test patterns)
+
+---
+
+#### Phase 2: Pattern Refinement (After File List Generated)
+
+After "Files to Modify" lists are generated for each subtask, refine the pattern:
+
+| Actual File Count | Refinement Action |
+|-------------------|-------------------|
+| 0-1 files | Confirm `main-only`, or downgrade if currently higher |
+| 2-4 files | Confirm `sequential` |
+| 5+ files | Escalate to `parallel` if not already |
+
+**Conflict Resolution:**
+- If Phase 2 file count contradicts Phase 1 scope keywords, **Phase 2 wins** (empirical data over heuristics)
+- Document the refinement in the rationale field
+
+---
+
+#### Default Behavior (Explicit)
+
+When NO signals are detected (no specialist keywords, no scope signals, no complexity indicators):
+- **Default Pattern**: `sequential`
+- **Default Complexity**: `medium`
+- **Rationale**: Safe middle ground - provides agent coordination without parallel overhead
 
 ### Diagram in Issues
 
-Always include an ASCII diagram in the issue body to visualize the execution flow:
-
-```
-// main-only
-+------+
-| main |
-+------+
-
-// delegation
-+------+     +--------------------+
-| main | --> | deepfake-cv-expert |
-+------+     +--------------------+
-
-// sequential
-+---------+     +------+
-| explore | --> | main |
-+---------+     +------+
-```
+Always include an ASCII diagram in the issue body. Copy the relevant pattern from **Execution Patterns** section above.
 
 ---
 
