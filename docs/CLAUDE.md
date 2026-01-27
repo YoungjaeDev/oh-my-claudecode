@@ -83,6 +83,7 @@ When you detect these patterns, you MUST invoke the corresponding skill:
 | "tdd", "test first", "red green" | `tdd` |
 | "setup mcp", "configure mcp" | `mcp-setup` |
 | "stop", "cancel", "abort" | `cancel` (unified) |
+| "humanize", "make it human", "remove AI slop", "인간적으로", "AI 느낌 빼", "자연스럽게" | `humanizer` (silent) |
 
 **Keyword Conflict Resolution:**
 - Explicit mode keywords (`ulw`, `ultrawork`, `eco`, `ecomode`) ALWAYS override defaults
@@ -253,8 +254,9 @@ User says "stop", "cancel", "abort" → Invoke unified `cancel` skill (automatic
 | `tdd` | TDD enforcement: test-first development | "tdd", "test first" | `/oh-my-claudecode:tdd` |
 | `mcp-setup` | Configure MCP servers for extended capabilities | "setup mcp", "configure mcp" | `/oh-my-claudecode:mcp-setup` |
 | `learn-about-omc` | Usage pattern analysis | - | `/oh-my-claudecode:learn-about-omc` |
+| `humanizer` | Remove AI writing signs, add human voice | "humanize", "인간적으로" | `/oh-my-claudecode:humanizer` |
 
-### All 32 Agents
+### All 33 Agents
 
 Always use `oh-my-claudecode:` prefix when calling via Task tool.
 
@@ -276,6 +278,7 @@ Always use `oh-my-claudecode:` prefix when calling via Task tool.
 | **TDD** | `tdd-guide-low` | `tdd-guide` | - |
 | **Code Review** | `code-reviewer-low` | - | `code-reviewer` |
 | **Data Science** | `scientist-low` | `scientist` | `scientist-high` |
+| **Humanization** | - | `humanizer` | - |
 
 ### Agent Selection Guide
 
@@ -294,6 +297,7 @@ Always use `oh-my-claudecode:` prefix when calling via Task tool.
 | Write docs/comments | `writer` | haiku |
 | Research docs/APIs | `researcher` | sonnet |
 | Analyze images/diagrams | `vision` | sonnet |
+| Transform AI text to human | `humanizer` | sonnet |
 | Strategic planning | `planner` | opus |
 | Review/critique plan | `critic` | opus |
 | Pre-planning analysis | `analyst` | opus |
