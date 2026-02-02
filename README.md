@@ -15,6 +15,33 @@ Plugin-based configuration for Claude Code with multi-agent orchestration.
 ```bash
 git clone git@github.com:YoungjaeDev/oh-my-claudecode.git
 cd oh-my-claudecode
+claude  # Plugins auto-load from .claude/settings.json
+```
+
+### Use in Another Project
+
+Copy desired plugins to your project:
+
+```bash
+# Copy specific plugin
+cp -r oh-my-claudecode/plugins/core-config your-project/plugins/
+
+# Add to your .claude/settings.json
+{
+  "plugins": {
+    "local": ["./plugins/core-config"]
+  }
+}
+```
+
+Or reference from absolute path:
+
+```json
+{
+  "plugins": {
+    "local": ["/path/to/oh-my-claudecode/plugins/core-config"]
+  }
+}
 ```
 
 ## Plugins
