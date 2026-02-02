@@ -10,38 +10,39 @@ Plugin-based configuration for Claude Code with multi-agent orchestration.
 - `gh` CLI for GitHub plugins
 - `uv` for Python-based MCP servers
 
-### Quick Start
+### Quick Start (Local)
 
 ```bash
-git clone git@github.com:YoungjaeDev/oh-my-claudecode.git
-cd oh-my-claudecode
+git clone git@github.com:YoungjaeDev/my-claude-plugins.git
+cd my-claude-plugins
 claude  # Plugins auto-load from .claude/settings.json
 ```
 
-### Use in Another Project
+### Install from Marketplace
 
-Copy desired plugins to your project:
+Add marketplace and install plugins in Claude Code:
 
 ```bash
-# Copy specific plugin
-cp -r oh-my-claudecode/plugins/core-config your-project/plugins/
+# 1. Add marketplace
+/plugin marketplace add YoungjaeDev/my-claude-plugins
 
-# Add to your .claude/settings.json
-{
-  "plugins": {
-    "local": ["./plugins/core-config"]
-  }
-}
+# 2. Install individual plugins
+/plugin install core-config@my-claude-plugins
+/plugin install github-dev@my-claude-plugins
+/plugin install code-scout@my-claude-plugins
 ```
 
-Or reference from absolute path:
+### Install Scope Options
 
-```json
-{
-  "plugins": {
-    "local": ["/path/to/oh-my-claudecode/plugins/core-config"]
-  }
-}
+```bash
+# User scope (all projects) - default
+/plugin install core-config@my-claude-plugins
+
+# Project scope (team shared, git tracked)
+/plugin install core-config@my-claude-plugins --scope project
+
+# Local scope (personal, not tracked)
+/plugin install core-config@my-claude-plugins --scope local
 ```
 
 ## Plugins
