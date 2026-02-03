@@ -1,8 +1,0 @@
-{
-  "name": "omc-install-guide",
-  "owner": {
-    "name": "YoungjaeDev"
-  },
-  "description": "oh-my-claudecode must be installed directly from the source repository. See README for instructions.",
-  "plugins": []
-}
