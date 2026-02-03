@@ -1,9 +1,8 @@
 {
   "mcpServers": {
     "interactive_review": {
-      "command": "uv",
-      "args": ["run", "server.py"],
-      "cwd": "${CLAUDE_PLUGIN_ROOT}/mcp-server"
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-server/run.sh"]
     }
   }
 }
