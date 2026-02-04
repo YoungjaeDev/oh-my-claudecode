@@ -1421,7 +1421,7 @@ def generate_html(
                 return `
                     <div class="line-wrapper ${{hasComment ? 'has-comment' : ''}} ${{isSelectingLine ? 'selecting' : ''}}"
                          data-line-index="${{index}}">
-                        <button class="add-comment-btn" data-action="add-comment" title="Add comment" aria-label="Add comment to line ${{index + 1}}">+</button>
+                        <button class="add-comment-btn" onclick="event.stopPropagation(); quickAddComment(${{index}})" title="Add comment" aria-label="Add comment to line ${{index + 1}}">+</button>
                         <div class="line-number">${{index + 1}}</div>
                         <div class="line-content">${{escapeHtml(line.text) || '&nbsp;'}}</div>
                     </div>
