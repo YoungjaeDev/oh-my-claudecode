@@ -1087,37 +1087,38 @@ def generate_html(
             setupSidebarEventDelegation();
         }}
 
-        // Text selection in Preview view (with debouncing)
+        // Text selection in Preview view
         function setupTextSelectionHandler() {{
             const renderedContent = document.getElementById('rendered-content');
             const floatingToolbar = document.getElementById('floating-toolbar');
 
-            const handleSelection = debounce(() => {{
-                const selection = window.getSelection();
-                const text = selection.toString().trim();
+            renderedContent.addEventListener('mouseup', (e) => {{
+                // Small delay to let selection finalize
+                setTimeout(() => {{
+                    const selection = window.getSelection();
+                    const text = selection.toString().trim();
 
-                if (text && text.length > 0) {{
-                    selectedText = text;
-                    try {{
-                        selectionRange = selection.getRangeAt(0).cloneRange();
+                    if (text && text.length > 0) {{
+                        selectedText = text;
+                        try {{
+                            selectionRange = selection.getRangeAt(0).cloneRange();
 
-                        // Position floating toolbar near selection (fixed positioning)
-                        const rect = selection.getRangeAt(0).getBoundingClientRect();
-                        const top = rect.bottom + 8;
-                        const left = Math.max(10, rect.left + (rect.width / 2) - 50);
+                            // Position floating toolbar near selection (fixed positioning)
+                            const rect = selection.getRangeAt(0).getBoundingClientRect();
+                            const top = rect.bottom + 8 + window.scrollY;
+                            const left = Math.max(10, rect.left + (rect.width / 2) - 50);
 
-                        floatingToolbar.style.top = `${{top}}px`;
-                        floatingToolbar.style.left = `${{left}}px`;
-                        floatingToolbar.classList.add('visible');
-                    }} catch (err) {{
-                        console.log('Selection error:', err);
+                            floatingToolbar.style.top = `${{top}}px`;
+                            floatingToolbar.style.left = `${{left}}px`;
+                            floatingToolbar.classList.add('visible');
+                        }} catch (err) {{
+                            console.log('Selection error:', err);
+                        }}
+                    }} else {{
+                        hideFloatingToolbar();
                     }}
-                }} else {{
-                    hideFloatingToolbar();
-                }}
-            }}, 100);
-
-            renderedContent.addEventListener('mouseup', handleSelection);
+                }}, 10);
+            }});
 
             // Hide toolbar when clicking elsewhere
             document.addEventListener('mousedown', (e) => {{
