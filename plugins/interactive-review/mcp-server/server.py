@@ -39,6 +39,7 @@ from web_ui import parse_markdown, generate_html
 # Global state for the HTTP server
 _review_result: dict | None = None
 _async_result_event: asyncio.Event | None = None
+_main_loop: asyncio.AbstractEventLoop | None = None  # 메인 이벤트 루프 저장
 
 
 def calculate_timeout(content: str) -> int:
@@ -78,13 +79,9 @@ class ReviewHTTPHandler(SimpleHTTPRequestHandler):
                 _review_result = json.loads(post_data.decode("utf-8"))
 
                 # Signal the async event (thread-safe)
-                if _async_result_event:
-                    try:
-                        loop = asyncio.get_running_loop()
-                    except RuntimeError:
-                        loop = None
-                    if loop:
-                        loop.call_soon_threadsafe(_async_result_event.set)
+                # HTTP 핸들러는 별도 스레드에서 실행되므로 저장된 메인 루프 사용
+                if _async_result_event and _main_loop:
+                    _main_loop.call_soon_threadsafe(_async_result_event.set)
 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -133,11 +130,12 @@ async def start_review_impl(content: str, title: str = "Review") -> dict[str, An
     Returns:
         Review results with status, items, and summary
     """
-    global _review_result, _async_result_event
+    global _review_result, _async_result_event, _main_loop
 
     # Reset state
     _review_result = None
     _async_result_event = asyncio.Event()
+    _main_loop = asyncio.get_running_loop()  # 메인 이벤트 루프 저장
 
     # Create temp directory
     review_id = str(uuid.uuid4())[:8]
@@ -184,7 +182,15 @@ async def start_review_impl(content: str, title: str = "Review") -> dict[str, An
         webbrowser.open(url)
 
         # Calculate timeout based on content length
-        timeout = int(os.environ.get("REVIEW_TIMEOUT", calculate_timeout(content)))
+        # 환경변수가 유효하지 않은 경우 안전하게 폴백
+        env_timeout = os.environ.get("REVIEW_TIMEOUT")
+        if env_timeout is not None:
+            try:
+                timeout = int(env_timeout)
+            except ValueError:
+                timeout = calculate_timeout(content)
+        else:
+            timeout = calculate_timeout(content)
 
         # Wait for result using asyncio.Event
         try:
