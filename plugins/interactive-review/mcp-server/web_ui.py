@@ -1093,7 +1093,7 @@ def generate_html(
             const floatingToolbar = document.getElementById('floating-toolbar');
 
             renderedContent.addEventListener('mouseup', (e) => {{
-                // Small delay to let selection finalize
+                // Delay to let selection finalize
                 setTimeout(() => {{
                     const selection = window.getSelection();
                     const text = selection.toString().trim();
@@ -1105,7 +1105,7 @@ def generate_html(
 
                             // Position floating toolbar near selection (fixed positioning)
                             const rect = selection.getRangeAt(0).getBoundingClientRect();
-                            const top = rect.bottom + 8 + window.scrollY;
+                            const top = rect.bottom + 8;
                             const left = Math.max(10, rect.left + (rect.width / 2) - 50);
 
                             floatingToolbar.style.top = `${{top}}px`;
@@ -1117,7 +1117,7 @@ def generate_html(
                     }} else {{
                         hideFloatingToolbar();
                     }}
-                }}, 10);
+                }}, 50);
             }});
 
             // Hide toolbar when clicking elsewhere
