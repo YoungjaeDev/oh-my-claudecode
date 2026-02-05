@@ -110,7 +110,7 @@
       "name": "prd-suite",
       "source": "./plugins/prd-suite",
       "description": "PRD, Tech Spec, Use Case, IA document generation",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "planning"
     },
     {
