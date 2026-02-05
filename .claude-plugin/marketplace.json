@@ -19,7 +19,7 @@
       "name": "github-dev",
       "source": "./plugins/github-dev",
       "description": "GitHub workflow: commit, PR, issue, code review",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "category": "github"
     },
     {
@@ -117,7 +117,7 @@
       "name": "docs-forge",
       "source": "./plugins/docs-forge",
       "description": "README/CHANGELOG generation with CRO best practices",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "category": "documentation"
     }
   ]
