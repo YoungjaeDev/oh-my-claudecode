@@ -4,8 +4,8 @@
     "name": "YoungjaeDev"
   },
   "metadata": {
-    "description": "Personal Claude Code plugin collection with 14 specialized plugins",
-    "version": "1.2.0"
+    "description": "Personal Claude Code plugin collection with 16 specialized plugins",
+    "version": "1.3.0"
   },
   "plugins": [
     {
@@ -26,7 +26,7 @@
       "name": "interactive-review",
       "source": "./plugins/interactive-review",
       "description": "Web UI code review with MCP server",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "category": "code-review"
     },
     {
@@ -105,6 +105,20 @@
       "description": "Academic paper search (arXiv, PubMed, Semantic Scholar, etc.)",
       "version": "1.0.0",
       "category": "research"
+    },
+    {
+      "name": "prd-suite",
+      "source": "./plugins/prd-suite",
+      "description": "PRD, Tech Spec, Use Case, IA document generation",
+      "version": "1.0.0",
+      "category": "planning"
+    },
+    {
+      "name": "docs-forge",
+      "source": "./plugins/docs-forge",
+      "description": "README/CHANGELOG generation with CRO best practices",
+      "version": "0.1.0",
+      "category": "documentation"
     }
   ]
 }
