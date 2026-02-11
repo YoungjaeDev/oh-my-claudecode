@@ -24,12 +24,20 @@ Remove git worktrees and their associated branches. Supports selective, targeted
 | `--delete-remote` | Also delete the remote tracking branch |
 | `--force` | Force removal even if worktree has uncommitted changes |
 
+## Prerequisites
+
+This command MUST be run from the **main worktree** (the original clone directory), not from inside a linked worktree. `git worktree remove` operates on the main repository's worktree metadata.
+
 ## Workflow
 
-1. **List Current Worktrees**
+1. **Verify Main Worktree**
    ```bash
-   git worktree list
+   # Check if current directory is the main worktree
+   MAIN_WORKTREE=$(git worktree list | head -1 | awk '{print $1}')
+   CURRENT_DIR=$(git rev-parse --show-toplevel)
    ```
+   - If `$CURRENT_DIR` != `$MAIN_WORKTREE`: abort with error
+     > "This command must be run from the main worktree (`$MAIN_WORKTREE`), not from a linked worktree."
    - Parse output to identify all worktrees and their branches
    - Identify the **main worktree** (first entry, the primary checkout) — this is never removed
    - If no non-main worktrees exist, inform user and exit
@@ -73,6 +81,18 @@ Remove git worktrees and their associated branches. Supports selective, targeted
    git worktree remove --force "$WORKTREE_PATH"
    ```
 
+   **Windows: `Permission denied` error handling**
+   - If `git worktree remove` fails with "Permission denied":
+     - Likely cause: another process (IDE, terminal, file explorer) has the worktree directory open
+     - Prompt user with `AskUserQuestion`:
+       - **Close and retry**: "Close all programs using `$WORKTREE_PATH`, then retry"
+       - **Manual delete + prune**: Fall back to manual removal:
+         ```bash
+         rm -rf "$WORKTREE_PATH"
+         git worktree prune
+         ```
+       - **Abort**: skip this worktree
+
 6. **Delete Local Branch**
    ```bash
    # Safe delete (fails if unmerged)
@@ -109,7 +129,9 @@ Remove git worktrees and their associated branches. Supports selective, targeted
 
 ## Notes
 
+- **Must be run from the main worktree** (original clone directory), not from inside a linked worktree
 - The main worktree (primary checkout) is **never** removed
 - Use `--prune` periodically to clean up references from manually deleted worktree directories
 - After PR merge, prefer `/github-dev:post-merge` for branch cleanup; use this command for worktree-specific removal
 - This command pairs with `/github-dev:create-worktree` for the full worktree lifecycle
+- **Windows**: `Permission denied` errors typically mean another process (IDE, terminal) holds a lock on the worktree directory. Close all programs using that path before retrying
