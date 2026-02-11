@@ -4,8 +4,8 @@
     "name": "YoungjaeDev"
   },
   "metadata": {
-    "description": "Personal Claude Code plugin collection with 16 specialized plugins",
-    "version": "1.5.2"
+    "description": "Personal Claude Code plugin collection with 17 specialized plugins",
+    "version": "1.5.3"
   },
   "plugins": [
     {
@@ -119,6 +119,13 @@
       "description": "README/CHANGELOG generation with CRO best practices",
       "version": "0.2.0",
       "category": "documentation"
+    },
+    {
+      "name": "slidev",
+      "source": "./plugins/slidev",
+      "description": "Slidev markdown presentation generator with interview workflow",
+      "version": "1.0.0",
+      "category": "content"
     }
   ]
 }
