@@ -56,6 +56,19 @@ bash <plugin-root>/hooks/prompt_inject.sh codex   # -> {"hookSpecificOutput":{..
 
 The descriptor and script update with the plugin, but on Codex they run only through the manual `~/.codex/hooks.json` registration above. There is no automatic wiring.
 
+Trust for that registration is recorded in `~/.codex/config.toml`, not in `hooks.json`: `/hooks` approval writes an entry shaped like
+
+```toml
+[hooks.state."/path/to/prompt_inject.sh:UserPromptSubmit:0:0"]
+trusted_hash = "<sha256>"
+```
+
+and a missing entry skips the hook silently, with no error and no warning.
+
+A `hook: UserPromptSubmit` line in `codex exec` output does not prove this hook ran. The same line comes from any already-trusted hook source, including a pre-existing `~/.codex/hooks.json` entry, so identify the hook by its command path rather than the event name (measured on codex-cli 0.145.0, 2026-07-27; see `.llmwiki/wiki/runtimes/codex-plugin-surfaces.md`).
+
+`trusted_hash` is presumably a content hash, so editing `prompt_inject.sh` after approval probably forces re-approval via `/hooks`. **Unverified**.
+
 ## Guidelines
 
 User-global work guidelines live in `~/.claude/CLAUDE.md` (SSOT, auto-loaded by Claude Code). Project-specific guidelines live in each repo's `CLAUDE.md`.

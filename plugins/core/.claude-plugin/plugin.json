@@ -1,6 +1,6 @@
 {
   "name": "core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hooks only: Python auto-format on Write/Edit, cross-platform terminal notifications, and a per-prompt behavioral block (`prompt_inject.sh`, shared Claude + Codex). The block is fixed; two pointers are conditional — `.llmwiki/insight/` when a knowledge root resolves in cwd, and a one-line `[council]` delegation reminder when a second-model CLI (codex / agy) is on PATH (Claude-only). Work guidelines live in `~/.claude/CLAUDE.md`.",
   "hooks": {
     "UserPromptSubmit": [

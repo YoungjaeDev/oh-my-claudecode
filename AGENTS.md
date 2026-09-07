@@ -83,7 +83,15 @@ bash plugins/council/skills/convene/tests/run-tests.sh
 - `.githooks/pre-commit` 이 매 커밋마다 같은 가드를 돌린다. clone 당 한 번 `git config core.hooksPath .githooks` 로 활성화한다.
 - `check-shell-portability.mjs` 는 GNU 전용 셸 구문이 폴백도 capability probe 도 없이 쓰인 경우만 잡는다. 증거는 코드여야 하고 주석은 인정하지 않는다. 예외는 `# portability-ok: <사유>` 로 표시한다. 상세는 `README.md` 의 "CI 가드가 지키는 것".
 - macOS CI 레그(`validate-codex.yml` 의 `macos` job)가 BSD 폴백이 실제로 실행되는 유일한 지점이다. `/bin/bash` 로 돌려 bash 3.2 를 강제한다.
-- Codex 카탈로그 확인: `codex plugin marketplace add "$PWD" && codex plugin list --marketplace my-claude-plugins && codex plugin marketplace remove my-claude-plugins` (8 entries).
+- Codex 카탈로그 확인은 일회용 `CODEX_HOME` 에서 돌린다 (8 entries). 실제 홈에서 `marketplace add` 하면 기존 등록과 소스가 달라 실패하고, 이어지는 `marketplace remove` 는 레시피가 만든 것이 아니라 **원래 등록을 지운다**.
+
+```bash
+CH=$(mktemp -d)
+CODEX_HOME="$CH" codex plugin marketplace add "$PWD"
+CODEX_HOME="$CH" codex plugin list --marketplace my-claude-plugins
+rm -rf "$CH"
+```
+
 - Python 테스트는 해당 플러그인 디렉터리에서 `uv run pytest`.
 
 ## 문서 작성 스타일
