@@ -52,14 +52,22 @@ def run_multi_gpu(records: list[dict]) -> list[list[dict]]:
         raise RuntimeError("no CUDA devices visible - check drivers / CUDA_VISIBLE_DEVICES")
     n_gpus = len(device_tokens)
 
+    if not records:
+        return []  # nothing to split; also keeps the ceiling division below non-zero
+
     ctx = mp.get_context("spawn")  # fork silently corrupts CUDA state
-    chunk_size = (len(records) + n_gpus - 1) // n_gpus  # ceiling division
-    chunks = [records[i*chunk_size:(i+1)*chunk_size] for i in range(n_gpus)]
+    # Cap the split at len(records). With 2 records and 4 GPUs, ceiling division
+    # gives chunk_size 1, so chunks 2 and 3 slice past the end and arrive empty,
+    # and an empty chunk still spawns a worker and loads the model for zero rows.
+    # Build only the chunks that carry work, and only the pools that receive one.
+    n_chunks = min(n_gpus, len(records))
+    chunk_size = (len(records) + n_chunks - 1) // n_chunks  # ceiling division
+    chunks = [records[i*chunk_size:(i+1)*chunk_size] for i in range(n_chunks)]
 
     pools = [
         ProcessPoolExecutor(max_workers=1, mp_context=ctx,
                             initializer=_worker_init_with_gpu, initargs=(tok,))
-        for tok in device_tokens
+        for tok in device_tokens[:n_chunks]
     ]
     try:
         futures = [pool.submit(_predict_chunk, chunk) for pool, chunk in zip(pools, chunks)]
